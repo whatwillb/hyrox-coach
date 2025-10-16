@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
+<title>HYROX Watch Coach</title>
+<style>
+  :root{
+    --bg:#000; --ink:#fff; --muted:#a8b0c0;
+    --line:#2a2f3b;
+    --accent:#00e5ff;
+    --green:#10ff9c;
+    --yellow:#ffd200;
+    --orange:#ff8a3d;
+    --red:#ff3b30;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system, SF Pro Text, Inter, Roboto, Arial}
+  .wrap{padding:6px 8px 10px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .card{border:1px solid var(--line);border-radius:12px;padding:8px}
+  .label{font-size:11px;color:var(--muted)}
+  .big{font-weight:900;font-variant-numeric:tabular-nums}
+  .pace{font-size:42px;line-height:1.05}
+  .goal{font-size:16px;color:var(--muted)}
+  .laps{font-size:28px}
+  .btn{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#111;color:#fff;font-weight:800;font-size:18px}
+  .btn:active{transform:scale(0.98)}
+  .btn-accent{background:linear-gradient(135deg,#003cff,#00e5ff)}
+  .btn-ghost{background:#0c0c0c}
+  .btn-small{padding:10px;font-size:16px}
+  .kv{display:flex;align-items:center;justify-content:space-between;padding:8px;border:1px dashed var(--line);border-radius:10px}
+  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+  .grid{display:grid;gap:6px}
+  .hidden{display:none}
+  button,input,select{min-height:44px}
+  #date{width:100%;padding:8px;border-radius:10px;border:1px solid var(--line);background:#0b0b0b;color:#e8ecf6;font-size:16px}
+  .nav{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .pill{border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:#0b0b0b;color:#e8ecf6}
+  .center{text-align:center}
+  .green{color:var(--green)} .yellow{color:var(--yellow)} .orange{color:var(--orange)} .red{color:var(--red)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="card">
+    <div class="label">Instant Pace (GPS)</div>
+    <div id="pace" class="big pace">--:--/km</div>
+    <div class="goal">Goal <span id="goal">--:--/km</span></div>
+  </div>
+
+  <div id="runTools" class="grid">
+    <div class="row">
+      <div class="card center">
+        <div class="label">Lap</div>
+        <div id="lapCur" class="big laps">0</div>
+      </div>
+      <div class="card center">
+        <div class="label">Target</div>
+        <div id="lapTarget" class="big laps">0</div>
+      </div>
+    </div>
+    <button id="btnLap" class="btn btn-accent">LAP +1</button>
+    <div class="row">
+      <button id="btnStart" class="btn btn-ghost">Start</button>
+      <button id="btnReset" class="btn btn-ghost">Reset</button>
+    </div>
+    <div class="card kv">
+      <div>Stopwatch</div>
+      <div id="clock" class="mono">00:00.0</div>
+    </div>
+    <div class="row">
+      <button id="btnRest" class="btn btn-ghost btn-small">Start Rest</button>
+      <div class="card center">
+        <div class="label">Rest</div>
+        <div id="restTime" class="mono">—</div>
+      </div>
+    </div>
+    <div class="row">
+      <button id="restMinus" class="btn btn-ghost btn-small">−15s</button>
+      <button id="restPlus" class="btn btn-ghost btn-small">+15s</button>
+    </div>
+  </div>
+
+  <div class="card grid">
+    <div class="row">
+      <button id="prev" class="pill">◀︎ Prev</button>
+      <button id="next" class="pill">Next ▶︎</button>
+    </div>
+    <input id="date" type="date"/>
+    <div class="kv mono">
+      <div id="wTitle">Workout</div>
+      <div id="wPace">—</div>
+    </div>
+    <div class="kv mono">
+      <div id="wPresc">—</div>
+      <div id="wRest">—</div>
+    </div>
+    <div class="kv mono">
+      <div>250m Adjust</div>
+      <div id="wAdj">—</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const PLAN = {
+  "2025-10-14": {type:"run", title:"Threshold 5×1km", pace_s_per_km:290, intervals:[{dist_m:1000,reps:5,rest_s:80}]},
+  "2025-10-16": {type:"run", title:"Fatigue 3×800m", pace_s_per_km:285, intervals:[{dist_m:800,reps:3,rest_s:90}]},
+  "2025-10-19": {type:"gym", title:"Mock Race #1"},
+  "2025-10-21": {type:"run", title:"Race-Pace 6×800m", pace_s_per_km:275, intervals:[{dist_m:800,reps:6,rest_s:75}]},
+  "2025-10-23": {type:"run", title:"Ladder 4×1km", pace_s_per_km:275, intervals:[{dist_m:1000,reps:4,rest_s:120}]},
+  "2025-10-26": {type:"gym", title:"Ladder #1"},
+  "2025-10-28": {type:"run", title:"Threshold 4×1km", pace_s_per_km:270, intervals:[{dist_m:1000,reps:4,rest_s:90}]},
+  "2025-10-30": {type:"run", title:"Combo 4×1km", pace_s_per_km:265, intervals:[{dist_m:1000,reps:4,rest_s:90}]},
+  "2025-11-02": {type:"gym", title:"Ladder #2"},
+  "2025-11-04": {type:"run", title:"Race-Pace 5×1km", pace_s_per_km:255, intervals:[{dist_m:1000,reps:5,rest_s:75}]},
+  "2025-11-06": {type:"run", title:"Lactate 4×800m", pace_s_per_km:252, intervals:[{dist_m:800,reps:4,rest_s:90}]},
+  "2025-11-09": {type:"gym", title:"Mock Race #2"},
+  "2025-11-11": {type:"run", title:"Speed 8×400m + 3×200m", pace_s_per_km:240, intervals:[{dist_m:400,reps:8,rest_s:60},{dist_m:200,reps:3,rest_s:60}]},
+  "2025-11-13": {type:"run", title:"Tempo 3×1.2km", pace_s_per_km:252, intervals:[{dist_m:1200,reps:3,rest_s:90}]},
+  "2025-11-16": {type:"gym", title:"Hyrox (−25%)"},
+  "2025-11-18": {type:"run", title:"Sharpen 3×400m", pace_s_per_km:240, intervals:[{dist_m:400,reps:3,rest_s:90}]},
+  "2025-11-20": {type:"run", title:"Light 2×1km", pace_s_per_km:250, intervals:[{dist_m:1000,reps:2,rest_s:120}]},
+  "2025-11-22": {type:"race", title:"RACE DAY"}
+};
+
+const pad2 = n=>String(n).padStart(2,'0');
+const secToPace = s=>`${Math.floor(s/60)}:${pad2(Math.round(s%60))}/km`;
+const adjustTo250 = m=>{const laps=Math.max(1, Math.round(m/250)); return {laps, meters:laps*250};}
+const clampDate = d=>{const min=new Date("2025-10-14"), max=new Date("2025-11-22"); if(d<min) return min; if(d>max) return max; return d;};
+
+// Elements
+const paceEl=document.getElementById('pace'), goalEl=document.getElementById('goal');
+const lapCur=document.getElementById('lapCur'), lapTarget=document.getElementById('lapTarget');
+const btnLap=document.getElementById('btnLap'), btnStart=document.getElementById('btnStart'), btnReset=document.getElementById('btnReset');
+const btnRest=document.getElementById('btnRest'), restTime=document.getElementById('restTime'), restMinus=document.getElementById('restMinus'), restPlus=document.getElementById('restPlus');
+const dateInput=document.getElementById('date'), prevBtn=document.getElementById('prev'), nextBtn=document.getElementById('next');
+const wTitle=document.getElementById('wTitle'), wPace=document.getElementById('wPace'), wPresc=document.getElementById('wPresc'), wRest=document.getElementById('wRest'), wAdj=document.getElementById('wAdj');
+const tools=document.getElementById('runTools'), clock=document.getElementById('clock');
+
+// State
+let currentPlan=null, currentIntervalIndex=0, currentLap=0, targetLaps=0, restSeconds=60;
+let swTimer=null, startRef=0, elapsed=0, restTimer=null;
+let paceGoal=null;
+
+// Date init
+dateInput.min="2025-10-14"; dateInput.max="2025-11-22";
+const today = clampDate(new Date());
+dateInput.value = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
+
+// Events
+dateInput.addEventListener('change', renderDay);
+prevBtn.addEventListener('click', ()=>shiftDate(-1));
+nextBtn.addEventListener('click', ()=>shiftDate(1));
+btnLap.addEventListener('click', lapPlusOne);
+btnStart.addEventListener('click', toggleStart);
+btnReset.addEventListener('click', resetAll);
+btnRest.addEventListener('click', startRest);
+restMinus.addEventListener('click', ()=>{restSeconds=Math.max(15, restSeconds-15); restTime.textContent=restSeconds+"s"});
+restPlus.addEventListener('click', ()=>{restSeconds=Math.min(300, restSeconds+15); restTime.textContent=restSeconds+"s"});
+
+// Render & GPS
+renderDay(); initGPS();
+
+function shiftDate(inc){
+  const d=new Date(dateInput.value+"T00:00:00"); d.setDate(d.getDate()+inc);
+  dateInput.value = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  renderDay();
+}
+
+function renderDay(){
+  const key=dateInput.value; const w=PLAN[key]; currentPlan=w||null; currentIntervalIndex=0; currentLap=0; targetLaps=0; updateLapUI();
+  if(!w){ wTitle.textContent="—"; wPace.textContent="—"; wPresc.textContent="—"; wRest.textContent="—"; wAdj.textContent="—"; tools.classList.add('hidden'); paceGoal=null; goalEl.textContent="--:--/km"; return; }
+  wTitle.textContent=w.title;
+  if(w.type==="run"){
+    const pr=w.intervals.map(iv=>`${iv.reps}×${iv.dist_m}m`).join("+"); wPresc.textContent=pr;
+    const adj=w.intervals.map(iv=>{const a=adjustTo250(iv.dist_m); return `${iv.reps}×${a.meters}m(${a.laps} laps)`}).join("+"); wAdj.textContent=adj;
+    const rests=[...new Set(w.intervals.map(iv=>iv.rest_s))]; wRest.textContent=rests.map(s=>s+"s").join("/"); restSeconds=rests[0]||60; restTime.textContent=restSeconds+"s";
+    paceGoal=w.pace_s_per_km||null; goalEl.textContent=paceGoal?secToPace(paceGoal):"--:--/km"; wPace.textContent=paceGoal?secToPace(paceGoal):"—";
+    setCurrentInterval(0); tools.classList.remove('hidden');
+  } else {
+    wPresc.textContent="Gym / stations"; wAdj.textContent="—"; wRest.textContent="—"; paceGoal=null; goalEl.textContent="--:--/km"; wPace.textContent="—"; tools.classList.add('hidden');
+  }
+  resetTimersOnly();
+}
+
+function setCurrentInterval(i){
+  const iv=currentPlan.intervals[i]; if(!iv) return;
+  const a=adjustTo250(iv.dist_m); targetLaps=a.laps; currentLap=0; currentIntervalIndex=i; updateLapUI();
+}
+
+function updateLapUI(){ lapCur.textContent=String(currentLap); lapTarget.textContent=String(targetLaps); }
+
+function toggleStart(){
+  if(swTimer){ clearInterval(swTimer); swTimer=null; elapsed=performance.now()-startRef; btnStart.textContent="Resume"; return; }
+  startRef = performance.now() - (elapsed||0);
+  swTimer = setInterval(()=>{ const t=performance.now()-startRef; elapsed=t; const ms=Math.floor((t%1000)/100), s=Math.floor(t/1000)%60, m=Math.floor(t/60000); clock.textContent=`${pad2(m)}:${pad2(s)}.${ms}`; },100);
+  btnStart.textContent="Pause";
+}
+
+function resetAll(){ resetTimersOnly(); currentLap=0; updateLapUI(); if(currentPlan && currentPlan.intervals){ currentPlan.intervals.forEach(iv=>iv._done=0); setCurrentInterval(0);} }
+function resetTimersOnly(){ if(swTimer){ clearInterval(swTimer); swTimer=null; } elapsed=0; clock.textContent="00:00.0"; btnStart.textContent="Start"; if(restTimer){ clearInterval(restTimer); restTimer=null; } restTime.textContent = restSeconds?restSeconds+"s":"—"; }
+
+function lapPlusOne(){
+  if(!currentPlan || currentPlan.type!=="run") return;
+  currentLap += 1;
+  if(currentLap >= targetLaps){
+    updateLapUI(); startRest();
+    const iv=currentPlan.intervals[currentIntervalIndex]; iv._done=(iv._done||0)+1;
+    if(iv._done >= iv.reps){
+      if(currentIntervalIndex+1 < currentPlan.intervals.length){ setCurrentInterval(currentIntervalIndex+1); }
+      else { alert("Workout complete!"); resetAll(); return; }
+    } else { currentLap=0; updateLapUI(); }
+  } else { updateLapUI(); }
+}
+
+function startRest(){
+  if(restTimer){ clearInterval(restTimer); }
+  let remaining=restSeconds||60; restTime.textContent=remaining+"s";
+  restTimer=setInterval(()=>{ remaining -= 1; if(remaining<=0){ clearInterval(restTimer); restTimer=null; restTime.textContent="GO!"; } else { restTime.textContent=remaining+"s"; } }, 1000);
+}
+
+/* GPS Pace + Color (brighter yellow used) */
+function initGPS(){
+  if(!navigator.geolocation) return;
+  navigator.geolocation.watchPosition(onPos, console.error, {enableHighAccuracy:true, maximumAge:500, timeout:10000});
+}
+function onPos(pos){
+  const {latitude, longitude, speed} = pos.coords; const ts=pos.timestamp;
+  let secPerKm=null;
+  if(speed && speed>0.5){ secPerKm = 1000/speed; }
+  else if(window._last){
+    const dt=(ts-window._last.ts)/1000; if(dt>0){ const d=haversine(window._last.lat,window._last.lon,latitude,longitude); const v=d/dt; if(v>0.5) secPerKm=1000/v; }
+  }
+  window._last={lat:latitude, lon:longitude, ts};
+  if(secPerKm){
+    if(!window._buf) window._buf=[]; window._buf.push(secPerKm); if(window._buf.length>5) window._buf.shift();
+    const avg=window._buf.reduce((a,b)=>a+b,0)/window._buf.length; renderPace(avg);
+  }
+}
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371000; const toRad=d=>d*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLon=toRad(lat2-lon1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+function renderPace(secPerKm){
+  if(!paceGoal){ paceEl.textContent="--:--/km"; return; }
+  const m=Math.floor(secPerKm/60), s=Math.round(secPerKm%60);
+  paceEl.textContent = `${m}:${pad2(s)}/km`;
+  const delta = secPerKm - paceGoal;
+  let cls="green";
+  if(delta>0 && delta<=10) cls="yellow";
+  else if(delta>10 && delta<=20) cls="orange";
+  else if(delta>20) cls="red";
+  paceEl.className = "big pace " + cls;
+}
+function pad2(n){ return String(n).padStart(2,"0"); }
+</script>
+</body>
+</html>
