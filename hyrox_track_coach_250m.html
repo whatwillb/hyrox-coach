@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<title>HYROX Track Coach (250m)</title>
+<style>
+  :root{
+    --bg:#0b1220; --card:#0e1626; --ink:#e6eefc; --muted:#9fb0cc;
+    --accent:#00d4ff; --good:#10b981; --warn:#f59e0b; --meh:#fb923c; --bad:#ef4444;
+    --line: rgba(158, 176, 204, .25);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background: radial-gradient(1200px 600px at 50% -10%, #0a1020 0%, var(--bg) 40%); color:var(--ink); font-family:ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial}
+  header{display:flex;gap:12px;align-items:center;padding:16px}
+  .logo{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,#00d4ff,#60a5fa);font-weight:800}
+  h1{font-size:18px;margin:0}
+  .sub{font-size:12px;color:var(--muted)}
+  .wrap{padding:0 16px 24px}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+        border:1px solid var(--line); border-radius:16px; padding:14px; margin:12px 0; box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+  input, select, button{
+    width:100%; padding:12px 14px; border-radius:12px; border:1px solid var(--line);
+    background: rgba(255,255,255,.03); color:var(--ink); font-size:16px; outline:none;
+  }
+  .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px}
+  .title{font-weight:800;font-size:18px;margin:0 0 6px}
+  .muted{color:var(--muted); font-size:13px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .chip{border:1px solid var(--line);background:rgba(255,255,255,.03);color:#cfe2ff;font-size:12px;padding:6px 10px;border-radius:999px}
+  .kv{display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px dashed var(--line);border-radius:12px}
+  .big{font-size:32px;font-weight:900;letter-spacing:1px}
+  .pace{font-variant-numeric:tabular-nums}
+  .green{color:var(--good)} .yellow{color:var(--warn)} .orange{color:var(--meh)} .red{color:var(--bad)}
+  .btn{display:inline-flex;justify-content:center;align-items:center;gap:8px;border:1px solid var(--line);background:linear-gradient(135deg, rgba(0,212,255,.12), rgba(96,165,250,.12));font-weight:700}
+  .btn-flat{background:rgba(255,255,255,.03)}
+  .grid{display:grid;gap:10px}
+  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+  .bar{height:10px;background:#1f2a44;border-radius:999px;overflow:hidden}
+  .bar > span{display:block;height:100%;background:linear-gradient(90deg, #60a5fa, #00d4ff)}
+  footer{color:var(--muted);font-size:12px;text-align:center;padding:16px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">H</div>
+  <div>
+    <h1>HYROX Track Coach</h1>
+    <div class="sub">250m track • GPS pace • Lap & rest timers • Goal color zones</div>
+  </div>
+</header>
+<div class="wrap">
+
+  <div class="card">
+    <label for="date">Select date</label>
+    <input id="date" type="date"/>
+    <div class="muted">Pick any day between Oct 14 and Nov 22, 2025.</div>
+  </div>
+
+  <div id="workout" class="card" style="display:none">
+    <div class="title" id="wTitle">Workout</div>
+    <div class="chips" id="wChips"></div>
+    <div class="grid">
+      <div class="kv"><span>Type</span><b id="wType">—</b></div>
+      <div class="kv"><span>Target pace</span><b id="wPace" class="mono">—</b></div>
+      <div class="kv"><span>Prescription</span><b id="wPresc" class="mono">—</b></div>
+      <div class="kv"><span>Adjusted to 250m track</span><b id="wAdj" class="mono">—</b></div>
+      <div class="kv"><span>Rest suggestion</span><b id="wRest" class="mono">—</b></div>
+    </div>
+  </div>
+
+  <div id="runTools" class="card" style="display:none">
+    <div class="title">Run Tools</div>
+    <div class="row">
+      <div class="kv"><span>Lap</span><b class="big" id="lapCur">0</b></div>
+      <div class="kv"><span>Laps Target</span><b class="big" id="lapTarget">0</b></div>
+    </div>
+    <div class="row3" style="margin-top:10px">
+      <button class="btn" id="btnStart">Start</button>
+      <button class="btn-flat" id="btnLap">Lap +1</button>
+      <button class="btn-flat" id="btnReset">Reset</button>
+    </div>
+    <div class="kv" style="margin-top:10px">
+      <span>Stopwatch</span><b class="mono" id="clock">00:00.0</b>
+    </div>
+    <div class="row3" style="margin-top:10px">
+      <button class="btn" id="btnRest">Start Rest</button>
+      <select id="restPick"></select>
+      <div class="kv"><span>Rest countdown</span><b class="mono" id="restTime">—</b></div>
+    </div>
+  </div>
+
+  <div id="gps" class="card" style="display:none">
+    <div class="title">Live Pace (GPS)</div>
+    <div class="row">
+      <div class="kv"><span>Instant pace</span><b class="big pace" id="pace">—</b></div>
+      <div class="kv"><span>Goal</span><b class="big mono" id="goal">—</b></div>
+    </div>
+    <div class="bar"><span id="paceBar" style="width:0%"></span></div>
+    <div class="muted" style="margin-top:6px">Color zones: <span class="green">green</span> ≤ goal • <span class="yellow">yellow</span> close • <span class="orange">orange</span> off • <span class="red">red</span> far off</div>
+    <div class="muted" id="gpsNote" style="margin-top:6px">Grant location permission for live pace.</div>
+  </div>
+
+  <footer>© 2025 • Built for Bill • Max HR reference available in workbook</footer>
+</div>
+
+<script>
+/* ---------- PLAN DATA ---------- */
+// Distances in meters; app adjusts to nearest 250m for 250m track.
+const PLAN = {
+  "2025-10-14": {type:"run", title:"Track #1 — Threshold Intervals", pace_s_per_km: 290, intervals:[{dist_m:1000, reps:5, rest_s:80}], chips:["Threshold","Economy"]},
+  "2025-10-16": {type:"run", title:"Track #2 — Fatigue Simulation", pace_s_per_km: 285, intervals:[{dist_m:800, reps:3, rest_s:90}], noteStation:"10 wall balls + 200m jog", chips:["Stations","Control"]},
+  "2025-10-19": {type:"gym", title:"Hyrox Mock Race #1", chips:["Simulation"]},
+
+  "2025-10-21": {type:"run", title:"Track #1 — Race-Pace Build", pace_s_per_km: 275, intervals:[{dist_m:800, reps:6, rest_s:75}], chips:["Race Pace"]},
+  "2025-10-23": {type:"run", title:"Track #2 — Ladder Simulation", pace_s_per_km: 275, intervals:[{dist_m:1000, reps:4, rest_s:120}], noteStation:"Sled push 20m + 200m jog", chips:["Sled","Threshold"]},
+  "2025-10-26": {type:"gym", title:"Hyrox Ladder #1", chips:["Ladder"]},
+
+  "2025-10-28": {type:"run", title:"Track #1 — Threshold Rehearsal", pace_s_per_km: 270, intervals:[{dist_m:1000, reps:4, rest_s:90}], chips:["Threshold","Control"]},
+  "2025-10-30": {type:"run", title:"Track #2 — Fatigue Combo", pace_s_per_km: 265, intervals:[{dist_m:1000, reps:4, rest_s:90}], noteStation:"15 wall balls + 20m farmers carry", chips:["Combo"]},
+  "2025-11-02": {type:"gym", title:"Hyrox Ladder #2", chips:["Ladder"]},
+
+  "2025-11-04": {type:"run", title:"Track #1 — Race-Pace Intervals", pace_s_per_km: 255, intervals:[{dist_m:1000, reps:5, rest_s:75}], chips:["Race Pace","Rhythm"]},
+  "2025-11-06": {type:"run", title:"Track #2 — Lactate Control", pace_s_per_km: 252, intervals:[{dist_m:800, reps:4, rest_s:90}], noteStation:"10 burpees + 200m jog", chips:["Tolerance"]},
+  "2025-11-09": {type:"gym", title:"Hyrox Mock Race #2", chips:["Simulation"]},
+
+  "2025-11-11": {type:"run", title:"Track #1 — Speed Rehearsal", pace_s_per_km: 240, intervals:[{dist_m:400, reps:8, rest_s:60}, {dist_m:200, reps:3, rest_s:60}], chips:["Speed","Form"]},
+  "2025-11-13": {type:"run", title:"Track #2 — Controlled Tempo", pace_s_per_km: 252, intervals:[{dist_m:1200, reps:3, rest_s:90}], chips:["Tempo","Economy"]},
+  "2025-11-16": {type:"gym", title:"Hyrox Regular (−25% vol)", chips:["Taper"]},
+
+  "2025-11-18": {type:"run", title:"Track #1 — Sharpen", pace_s_per_km: 240, intervals:[{dist_m:400, reps:3, rest_s:90}], chips:["Sharp"]},
+  "2025-11-20": {type:"run", title:"Track #2 — Light Pace Touch", pace_s_per_km: 250, intervals:[{dist_m:1000, reps:2, rest_s:120}], chips:["Taper"]},
+  "2025-11-22": {type:"race", title:"RACE DAY — HYROX", chips:["Peak","Execute"]}
+};
+
+const pad2 = n=>String(n).padStart(2,'0');
+function secToPace(sec){ const m=Math.floor(sec/60), s=Math.round(sec%60); return `${m}:${pad2(s)}/km`; }
+function adjustTo250(meters){ const laps=Math.max(1, Math.round(meters/250)); return {laps, meters:laps*250}; }
+function dateKey(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+
+const dateInput = document.getElementById('date');
+dateInput.min = "2025-10-14"; dateInput.max = "2025-11-22";
+const today = new Date();
+dateInput.value = (today >= new Date("2025-10-14") && today <= new Date("2025-11-22")) ? dateKey(today) : "2025-10-14";
+
+let currentPlan=null, currentIntervalIndex=0, currentLap=0, targetLaps=0, swTimer=null, swStart=null, restTimer=null, restRemaining=0, paceGoal=null;
+
+const wCard = document.getElementById('workout'), wTitle=document.getElementById('wTitle'), wChips=document.getElementById('wChips'),
+      wType=document.getElementById('wType'), wPace=document.getElementById('wPace'), wPresc=document.getElementById('wPresc'),
+      wAdj=document.getElementById('wAdj'), wRest=document.getElementById('wRest');
+const tools=document.getElementById('runTools'), lapCur=document.getElementById('lapCur'), lapTarget=document.getElementById('lapTarget'),
+      clock=document.getElementById('clock'), restPick=document.getElementById('restPick'), restTime=document.getElementById('restTime');
+const paceBox=document.getElementById('gps'), paceEl=document.getElementById('pace'), goalEl=document.getElementById('goal'), paceBar=document.getElementById('paceBar'), gpsNote=document.getElementById('gpsNote');
+
+dateInput.addEventListener('change', renderDay);
+document.getElementById('btnStart').addEventListener('click', toggleStart);
+document.getElementById('btnLap').addEventListener('click', doLap);
+document.getElementById('btnReset').addEventListener('click', ()=>resetAll());
+document.getElementById('btnRest').addEventListener('click', startRest);
+
+renderDay(); initGPS();
+
+function renderDay(){
+  const key=dateInput.value, w=PLAN[key];
+  currentPlan=w||null; currentIntervalIndex=0; currentLap=0; updateLapUI();
+  if(!w){ wCard.style.display="block"; tools.style.display="none"; paceBox.style.display="none";
+    wTitle.textContent="General Day"; wChips.innerHTML=`<span class='chip'>Recovery</span>`;
+    wType.textContent="—"; wPace.textContent="—"; wPresc.textContent="—"; wAdj.textContent="—"; wRest.textContent="—"; return;
+  }
+  wCard.style.display="block"; wTitle.textContent=w.title; wChips.innerHTML=(w.chips||[]).map(c=>`<span class='chip'>${c}</span>`).join(''); wType.textContent=w.type.toUpperCase();
+
+  if (w.type==="run"){
+    const pr=w.intervals.map(iv=>`${iv.reps} × ${iv.dist_m}m`).join(" + ");
+    wPresc.textContent = pr + (w.noteStation?` • ${w.noteStation}`:"");
+    const adj=w.intervals.map(iv=>{const a=adjustTo250(iv.dist_m); return `${iv.reps} × ${a.meters}m (${a.laps} laps)`;}).join(" + ");
+    wAdj.textContent=adj;
+    paceGoal=w.pace_s_per_km||null; wPace.textContent=paceGoal?secToPace(paceGoal):"—";
+    restPick.innerHTML=""; [...new Set(w.intervals.map(iv=>iv.rest_s))].forEach(s=>{const o=document.createElement('option'); o.value=s; o.textContent=`${s}s`; restPick.appendChild(o);});
+    wRest.textContent=[...new Set(w.intervals.map(iv=>iv.rest_s))].map(s=>`${s}s`).join(" / ");
+    setCurrentInterval(0); tools.style.display="block"; paceBox.style.display="block"; goalEl.textContent=secToPace(paceGoal);
+  } else {
+    wPace.textContent="—"; wPresc.textContent="Gym / stations"; wAdj.textContent="—"; wRest.textContent="—";
+    tools.style.display="none"; paceBox.style.display="none"; paceGoal=null;
+  }
+  resetAll(false);
+}
+function setCurrentInterval(index){
+  const iv=currentPlan.intervals[index]; if(!iv) return;
+  const a=adjustTo250(iv.dist_m); targetLaps=a.laps; currentIntervalIndex=index; currentLap=0; updateLapUI();
+}
+function updateLapUI(){ lapCur.textContent=currentLap; lapTarget.textContent=targetLaps; }
+
+function toggleStart(){
+  if (swTimer){ clearInterval(swTimer); swTimer=null; this.textContent="Start"; return; }
+  const startAt = performance.now() - (window._elapsed||0);
+  swTimer = setInterval(()=>{ const t=performance.now()-startAt; window._elapsed=t; const ms=Math.floor(t%1000/100), s=Math.floor(t/1000)%60, m=Math.floor(t/60000); clock.textContent=`${pad2(m)}:${pad2(s)}.${ms}`; },100);
+  this.textContent="Pause";
+}
+function doLap(){
+  if(!currentPlan || currentPlan.type!=="run") return;
+  currentLap += 1;
+  if(currentLap >= targetLaps){
+    updateLapUI(); startRest();
+    const iv=currentPlan.intervals[currentIntervalIndex];
+    iv._done=(iv._done||0)+1;
+    if(iv._done >= iv.reps){
+      if(currentIntervalIndex+1 < currentPlan.intervals.length){ setCurrentInterval(currentIntervalIndex+1);}
+      else { alert("Workout block complete!"); resetAll(); return; }
+    } else { currentLap=0; updateLapUI(); }
+  } else updateLapUI();
+}
+function resetAll(resetIntervals=true){
+  if(swTimer){ clearInterval(swTimer); swTimer=null; } window._elapsed=0; clock.textContent="00:00.0"; document.getElementById('btnStart').textContent="Start";
+  if(restTimer){ clearInterval(restTimer); restTimer=null; } restRemaining=0; restTime.textContent="—";
+  currentLap=0; updateLapUI();
+  if(resetIntervals && currentPlan && currentPlan.intervals){ currentPlan.intervals.forEach(iv=>iv._done=0); setCurrentInterval(0); }
+}
+function startRest(){
+  const s=parseInt(restPick.value||"60",10); restRemaining=s; restTime.textContent=`${restRemaining}s`;
+  if(restTimer) clearInterval(restTimer);
+  restTimer=setInterval(()=>{ restRemaining-=1; if(restRemaining<=0){ clearInterval(restTimer); restTimer=null; restTime.textContent="GO!"; } else { restTime.textContent=`${restRemaining}s`; } },1000);
+}
+
+/* GPS pace with smoothing and goal-coloring */
+let lastPos=null, lastPaces=[];
+function initGPS(){
+  if(!navigator.geolocation){ gpsNote.textContent="Geolocation not supported."; return; }
+  navigator.geolocation.watchPosition(onPos, onGPSError, {enableHighAccuracy:true, maximumAge:500, timeout:10000});
+}
+function onPos(pos){
+  const {latitude, longitude, speed}=pos.coords; const ts=pos.timestamp;
+  let secPerKm=null;
+  if (speed && speed>0.5){ secPerKm = 1000/speed; }
+  else if (lastPos){
+    const dt=(ts-lastPos.ts)/1000; if(dt>0){
+      const d=haversine(lastPos.lat,lastPos.lon,latitude,longitude);
+      const v=d/dt; if(v>0.5) secPerKm=1000/v;
+    }
+  }
+  lastPos={lat:latitude, lon:longitude, ts};
+  if(secPerKm){
+    lastPaces.push(secPerKm); if(lastPaces.length>6) lastPaces.shift();
+    const avg=lastPaces.reduce((a,b)=>a+b,0)/lastPaces.length; renderPace(avg);
+  }
+}
+function onGPSError(err){ gpsNote.textContent="Location permission needed for live pace ("+err.message+")."; }
+function haversine(lat1,lon1,lat2,lon2){
+  const toRad=d=>d*Math.PI/180, R=6371000, dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+function renderPace(secPerKm){
+  if(!paceGoal){ paceEl.textContent="—"; return; }
+  const m=Math.floor(secPerKm/60), s=Math.round(secPerKm%60);
+  const paceStr = `${m}:${String(s).padStart(2,'0')}/km`;
+  paceEl.textContent = paceStr;
+  const delta = secPerKm - paceGoal;
+  let cls="green";
+  if (delta>0 && delta<=10) cls="yellow";
+  else if (delta>10 && delta<=20) cls="orange";
+  else if (delta>20) cls="red";
+  paceEl.className = "big pace " + cls;
+  const pct = Math.max(0, Math.min(150, (paceGoal/secPerKm)*100));
+  paceBar.style.width = pct + "%";
+}
+</script>
+</body>
+</html>
