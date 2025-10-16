@@ -1,0 +1,400 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<title>HYROX Watch Coach — Auto Laps</title>
+<style>
+  :root{
+    --bg:#000; --ink:#fff; --muted:#9aa3ad; --line:#2a2f3b;
+    --btn-blue:#2563eb;   /* LAP */
+    --btn-green:#16a34a;  /* START */
+    --btn-gray:#374151;   /* RESET/SECONDARY */
+    --btn-purple:#7c3aed; /* REST */
+    --btn-red:#dc2626;    /* -15s */
+    --btn-yellow:#fde047; /* +15s (brighter) */
+    --pace-green:#10ff9c; --pace-yellow:#ffe45e; --pace-orange:#ff8a3d; --pace-red:#ff3b30;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system, SF Pro Text, Inter, Roboto, Arial}
+  .wrap{padding:8px 10px 90px}
+  .card{border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px}
+  .label{font-size:12px;color:var(--muted)}
+  .big{font-weight:900;font-variant-numeric:tabular-nums}
+  .pace{font-size:48px;line-height:1.05}
+  .goal{font-size:16px;color:var(--muted)}
+  .laps{font-size:32px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
+  .kv{display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px dashed var(--line);border-radius:12px}
+  .hidden{display:none}
+
+  /* Big colored buttons */
+  .btn{width:100%;border:none;border-radius:16px;color:#fff;font-weight:800;
+       font-size:22px; padding:18px 14px; display:flex; align-items:center; justify-content:center; gap:10px}
+  .btn:active{transform:scale(0.98)}
+  .btn-blue{background:var(--btn-blue)}
+  .btn-green{background:var(--btn-green)}
+  .btn-gray{background:var(--btn-gray)}
+  .btn-purple{background:var(--btn-purple)}
+  .btn-red{background:var(--btn-red)}
+  .btn-yellow{background:var(--btn-yellow); color:#1a1a1a}
+
+  /* Sticky LAP bar */
+  .sticky-lap{position:fixed; left:10px; right:10px; bottom:10px; z-index:50;}
+
+  /* Pace colors */
+  .p-green{color:var(--pace-green)} .p-yellow{color:var(--pace-yellow)}
+  .p-orange{color:var(--pace-orange)} .p-red{color:var(--pace-red)}
+
+  /* Tiny toggle row */
+  .tog{display:flex; gap:10px; align-items:center; justify-content:space-between}
+  .switch{position:relative; width:68px; height:34px; background:#222; border-radius:999px; border:1px solid var(--line);}
+  .thumb{position:absolute; width:30px; height:30px; border-radius:50%; top:1px; left:1px; background:#777; transition:all .2s}
+  .switch.on{background:#14532d; border-color:#1f7a46}
+  .switch.on .thumb{left:37px; background:#22c55e}
+  .sublabel{color:var(--muted); font-size:12px; margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="card">
+    <div class="label">Instant Pace (GPS)</div>
+    <div id="pace" class="big pace">--:--/km</div>
+    <div class="goal">Goal <span id="goal">--:--/km</span></div>
+  </div>
+
+  <div id="runTools" class="card">
+    <div class="kv mono">
+      <div id="progress">Rep 0/0</div><div id="clock">00:00.0</div>
+    </div>
+    <div class="kv">
+      <div>Lap</div><div id="lapCur" class="big laps">0</div>
+    </div>
+    <div class="kv">
+      <div>Target Laps</div><div id="lapTarget" class="big laps">0</div>
+    </div>
+
+    <div class="row" style="margin-top:8px">
+      <button id="btnStart" class="btn btn-green" onclick="toggleStart()">▶︎ Start</button>
+      <button id="btnReset" class="btn btn-gray" onclick="resetAll()">↺ Reset</button>
+    </div>
+
+    <div class="row" style="margin-top:8px">
+      <button id="btnRest" class="btn btn-purple" onclick="startRest()">⏲️ Rest</button>
+      <div class="row">
+        <button id="restMinus" class="btn btn-red" onclick="restMinus()">−15s</button>
+        <button id="restPlus" class="btn btn-yellow" onclick="restPlus()">+15s</button>
+      </div>
+    </div>
+    <div class="kv mono" style="margin-top:6px">
+      <div>Rest</div><div id="restTime">—</div>
+    </div>
+
+    <div class="card" style="margin:-2px 0 0 0; border:none; padding:8px 0 0 0">
+      <div class="tog">
+        <div>
+          <div class="label">Auto‑Lap (250 m)</div>
+          <div class="sublabel mono">Counts on 250 m distance OR re‑passing start geofence</div>
+        </div>
+        <div id="autoLapSwitch" class="switch" onclick="toggleAutoLap()"><div class="thumb"></div></div>
+      </div>
+
+      <div class="sublabel mono" style="margin-top:8px">
+        <span>Dist tol: <span id="tolD">±12 m</span> • Geofence: <span id="tolG">18 m</span> • Min lap: <span id="tolT">35 s</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="margin-bottom:8px">
+      <button id="prev" class="btn btn-gray" onclick="shiftDate(-1)">◀︎ Prev</button>
+      <button id="next" class="btn btn-gray" onclick="shiftDate(1)">Next ▶︎</button>
+    </div>
+    <input id="date" type="date" style="width:100%;padding:14px;border-radius:14px;border:1px solid var(--line);background:#0b0b0b;color:#e8ecf6;font-size:18px"/>
+    <div class="kv mono" style="margin-top:8px">
+      <div id="wTitle">Workout</div><div id="wPace">—</div>
+    </div>
+    <div class="kv mono">
+      <div id="wPresc">—</div><div id="wRest">—</div>
+    </div>
+    <div class="kv mono">
+      <div>250m Adjust</div><div id="wAdj">—</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Sticky LAP button always reachable -->
+<div class="sticky-lap">
+  <button id="btnLap" class="btn btn-blue" onclick="manualLap()">➕ LAP +1</button>
+</div>
+
+<script>
+/* ---------- PLAN DATA (sample dates; adjust as needed) ---------- */
+const PLAN = {
+  "2025-10-14": {type:"run", title:"Threshold 5×1km", pace_s_per_km:290, intervals:[{dist_m:1000,reps:5,rest_s:80}]},
+  "2025-10-16": {type:"run", title:"Fatigue 3×800m", pace_s_per_km:285, intervals:[{dist_m:800,reps:3,rest_s:90}]},
+  "2025-10-19": {type:"gym", title:"Mock Race #1"},
+  "2025-10-21": {type:"run", title:"Race-Pace 6×800m", pace_s_per_km:275, intervals:[{dist_m:800,reps:6,rest_s:75}]},
+  "2025-10-23": {type:"run", title:"Ladder 4×1km", pace_s_per_km:275, intervals:[{dist_m:1000,reps:4,rest_s:120}]},
+  "2025-10-26": {type:"gym", title:"Ladder #1"},
+  "2025-10-28": {type:"run", title:"Threshold 4×1km", pace_s_per_km:270, intervals:[{dist_m:1000,reps:4,rest_s:90}]},
+  "2025-10-30": {type:"run", title:"Combo 4×1km", pace_s_per_km:265, intervals:[{dist_m:1000,reps:4,rest_s:90}]},
+  "2025-11-02": {type:"gym", title:"Ladder #2"},
+  "2025-11-04": {type:"run", title:"Race-Pace 5×1km", pace_s_per_km:255, intervals:[{dist_m:1000,reps:5,rest_s:75}]},
+  "2025-11-06": {type:"run", title:"Lactate 4×800m", pace_s_per_km:252, intervals:[{dist_m:800,reps:4,rest_s:90}]},
+  "2025-11-09": {type:"gym", title:"Mock Race #2"},
+  "2025-11-11": {type:"run", title:"Speed 8×400m + 3×200m", pace_s_per_km:240, intervals:[{dist_m:400,reps:8,rest_s:60},{dist_m:200,reps:3,rest_s:60}]},
+  "2025-11-13": {type:"run", title:"Tempo 3×1.2km", pace_s_per_km:252, intervals:[{dist_m:1200,reps:3,rest_s:90}]},
+  "2025-11-16": {type:"gym", title:"Hyrox (−25%)"},
+  "2025-11-18": {type:"run", title:"Sharpen 3×400m", pace_s_per_km:240, intervals:[{dist_m:400,reps:3,rest_s:90}]},
+  "2025-11-20": {type:"run", title:"Light 2×1km", pace_s_per_km:250, intervals:[{dist_m:1000,reps:2,rest_s:120}]},
+  "2025-11-22": {type:"race", title:"RACE DAY"}
+};
+
+const pad2 = n=>String(n).padStart(2,'0');
+const secToPace = s=>`${Math.floor(s/60)}:${pad2(Math.round(s%60))}/km`;
+const adjustTo250 = m=>{const laps=Math.max(1, Math.round(m/250)); return {laps, meters:laps*250};}
+const clampDate = d=>{const min=new Date("2025-10-14"), max=new Date("2025-11-22"); if(d<min) return min; if(d>max) return max; return d;};
+
+// Elements
+const paceEl=document.getElementById('pace'), goalEl=document.getElementById('goal');
+const lapCur=document.getElementById('lapCur'), lapTarget=document.getElementById('lapTarget');
+const wTitle=document.getElementById('wTitle'), wPace=document.getElementById('wPace'), wPresc=document.getElementById('wPresc'), wRest=document.getElementById('wRest'), wAdj=document.getElementById('wAdj');
+const dateInput=document.getElementById('date');
+const progressEl=document.getElementById('progress');
+const clock=document.getElementById('clock');
+let swTimer=null, startRef=0, elapsed=0;
+let restTimer=null, restSeconds=60;
+
+// Auto-lap settings (defaults; editable by code if needed)
+let AUTO_LAP_ON=false;
+let LAP_METERS=250;
+let TOL_DIST=12;      // meters around 250m to accept
+let TOL_GEOFENCE=18;  // meters from start to accept
+let TOL_MINLAP=35;    // seconds minimum time between laps
+
+// State for plan/intervals/laps
+let currentPlan=null, currentIntervalIndex=0, currentLap=0, targetLaps=0, paceGoal=null;
+
+// GPS / tracking
+let watchId=null;
+let lastFix=null;
+let lastLapTime=0;        // ms timestamp
+let distSinceLap=0;       // meters
+let startGeo=null;        // {lat, lon} captured when starting timer
+let crossingArmed=true;   // hysteresis for geofence crossing
+let paceBuf=[];           // moving average buffer seconds per km
+
+// Date init
+dateInput.min="2025-10-14"; dateInput.max="2025-11-22";
+const today=clampDate(new Date());
+dateInput.value = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
+dateInput.addEventListener('change', renderDay);
+
+// Initial render & GPS
+renderDay(); initGPS();
+
+function shiftDate(inc){
+  const d=new Date(dateInput.value+"T00:00:00"); d.setDate(d.getDate()+inc);
+  dateInput.value = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  renderDay();
+}
+
+function renderDay(){
+  const key=dateInput.value; const w=PLAN[key]; currentPlan=w||null; currentIntervalIndex=0; currentLap=0; targetLaps=0; updateLapUI();
+  if(!w){ wTitle.textContent="—"; wPace.textContent="—"; wPresc.textContent="—"; wRest.textContent="—"; wAdj.textContent="—"; paceGoal=null; goalEl.textContent="--:--/km"; progressEl.textContent="—"; return; }
+  wTitle.textContent=w.title;
+  if(w.type==="run"){
+    const pr=w.intervals.map(iv=>`${iv.reps}×${iv.dist_m}m`).join("+"); wPresc.textContent=pr;
+    const adj=w.intervals.map(iv=>{const a=adjustTo250(iv.dist_m); return `${iv.reps}×${a.meters}m(${a.laps} laps)`}).join("+"); wAdj.textContent=adj;
+    const rests=[...new Set(w.intervals.map(iv=>iv.rest_s))]; wRest.textContent=rests.map(s=>s+"s").join("/"); restSeconds=rests[0]||60; document.getElementById('restTime').textContent=restSeconds+"s";
+    paceGoal=w.pace_s_per_km||null; goalEl.textContent=paceGoal?secToPace(paceGoal):"--:--/km"; wPace.textContent=paceGoal?secToPace(paceGoal):"—";
+    setCurrentInterval(0);
+  } else {
+    wPresc.textContent="Gym / stations"; wAdj.textContent="—"; wRest.textContent="—"; paceGoal=null; goalEl.textContent="--:--/km"; wPace.textContent="—";
+    progressEl.textContent="—";
+  }
+  resetTimersOnly();
+}
+
+function setCurrentInterval(i){
+  const iv=currentPlan && currentPlan.intervals ? currentPlan.intervals[i] : null;
+  if(!iv){ progressEl.textContent="—"; return; }
+  const a=adjustTo250(iv.dist_m); targetLaps=a.laps; currentLap=0; currentIntervalIndex=i; updateLapUI();
+  const done=iv._done||0; progressEl.textContent = `Rep ${done}/${iv.reps}`;
+}
+
+function updateLapUI(){
+  lapCur.textContent=String(currentLap); lapTarget.textContent=String(targetLaps);
+}
+
+// UI toggles
+function toggleAutoLap(){
+  AUTO_LAP_ON = !AUTO_LAP_ON;
+  const sw=document.getElementById('autoLapSwitch');
+  if(AUTO_LAP_ON){ sw.classList.add('on'); } else { sw.classList.remove('on'); }
+  vibrate(10);
+}
+
+function toggleStart(){
+  const startBtn = document.getElementById('btnStart');
+  if(swTimer){
+    clearInterval(swTimer); swTimer=null; elapsed=performance.now()-startRef;
+    startBtn.textContent="▶︎ Start"; startBtn.className="btn btn-green";
+    vibrate(15);
+    return;
+  }
+  // on start
+  startRef = performance.now() - (elapsed||0);
+  lastLapTime = performance.now();
+  distSinceLap = 0;
+  if(lastFix){ startGeo={lat:lastFix.lat, lon:lastFix.lon}; crossingArmed=false; } // arm after we move away
+  swTimer = setInterval(()=>{
+    const t=performance.now()-startRef; elapsed=t;
+    const ms=Math.floor((t%1000)/100), s=Math.floor(t/1000)%60, m=Math.floor(t/60000);
+    clock.textContent = `${pad2(m)}:${pad2(s)}.${ms}`;
+  }, 100);
+  startBtn.textContent="⏸ Pause"; startBtn.className="btn btn-green";
+  vibrate(10);
+}
+
+function resetAll(){
+  resetTimersOnly();
+  currentLap=0; updateLapUI();
+  if(currentPlan && currentPlan.intervals){ currentPlan.intervals.forEach(iv=>iv._done=0); setCurrentInterval(0); }
+  startGeo=null; distSinceLap=0; lastFix=null; paceBuf=[];
+  vibrate(20);
+}
+
+function resetTimersOnly(){
+  if(swTimer){ clearInterval(swTimer); swTimer=null; }
+  elapsed=0; clock.textContent="00:00.0"; const startBtn=document.getElementById('btnStart'); startBtn.textContent="▶︎ Start"; startBtn.className="btn btn-green";
+  if(restTimer){ clearInterval(restTimer); restTimer=null; } document.getElementById('restTime').textContent = restSeconds ? restSeconds+"s" : "—";
+}
+
+function manualLap(){
+  doLap("manual");
+}
+
+function doLap(src){
+  currentLap += 1; updateLapUI(); vibrate(8);
+  lastLapTime = performance.now();
+  distSinceLap = 0;
+  if(src==="geofence"){ crossingArmed=false; } // disarm until we move away
+  // interval progression
+  if(currentPlan && currentPlan.type==="run"){
+    const iv=currentPlan.intervals[currentIntervalIndex];
+    iv._done=(iv._done||0)+1;
+    progressEl.textContent = `Rep ${iv._done}/${iv.reps}`;
+    if(iv._done >= iv.reps){
+      if(currentIntervalIndex+1 < currentPlan.intervals.length){
+        setCurrentInterval(currentIntervalIndex+1);
+      } else {
+        alert("Workout complete!");
+        resetAll();
+        return;
+      }
+    } else {
+      if(currentLap >= targetLaps){
+        currentLap = 0; updateLapUI();
+        startRest();
+      }
+    }
+  }
+}
+
+function startRest(){
+  if(restTimer){ clearInterval(restTimer); }
+  let remaining = restSeconds || 60;
+  document.getElementById('restTime').textContent = remaining+"s";
+  restTimer = setInterval(()=>{
+    remaining -= 1;
+    if(remaining <= 0){
+      clearInterval(restTimer); restTimer=null; document.getElementById('restTime').textContent="GO!"; vibrate(40);
+      return;
+    }
+    document.getElementById('restTime').textContent = remaining+"s";
+  }, 1000);
+}
+
+function restMinus(){ restSeconds=Math.max(15, restSeconds-15); document.getElementById('restTime').textContent=restSeconds+"s"; vibrate(5); }
+function restPlus(){  restSeconds=Math.min(300, restSeconds+15); document.getElementById('restTime').textContent=restSeconds+"s"; vibrate(5); }
+
+/* GPS Pace + auto-lap logic */
+function initGPS(){
+  if(!navigator.geolocation) return;
+  watchId = navigator.geolocation.watchPosition(onPos, onPosErr, {enableHighAccuracy:true, maximumAge:500, timeout:10000});
+}
+function onPosErr(e){ console.log("GPS error", e); }
+
+function onPos(pos){
+  const {latitude, longitude, speed, accuracy} = pos.coords;
+  const ts=pos.timestamp;
+  const fix={lat:latitude, lon:longitude, ts, acc:accuracy||999};
+  // Update pace (prefer speed if available, else compute from delta)
+  let secPerKm=null;
+  if(speed && speed>0.4){ secPerKm = 1000/speed; }
+  if(lastFix){
+    // distance since last fix
+    const dd = haversine(lastFix.lat, lastFix.lon, fix.lat, fix.lon);
+    const dt = (ts - lastFix.ts)/1000;
+    // filter tiny jumps and low-accuracy spikes
+    if(dd < 30 || (fix.acc < 20 && lastFix.acc < 20)){
+      distSinceLap += dd;
+      if(!secPerKm && dt>0 && dd/dt>0.4){ secPerKm = 1000/(dd/dt); }
+    }
+    // Auto-lap logic
+    if(AUTO_LAP_ON && swTimer){
+      const now = performance.now();
+      const since = (now - lastLapTime)/1000;
+      // Condition A: distance bucket around 250m
+      if(since >= TOL_MINLAP && Math.abs(distSinceLap - LAP_METERS) <= TOL_DIST){
+        doLap("dist");
+      }
+      // Condition B: re-enter start geofence
+      if(startGeo){
+        const d2 = haversine(startGeo.lat, startGeo.lon, fix.lat, fix.lon);
+        if(d2 > (TOL_GEOFENCE*1.5)) { crossingArmed = true; } // armed only after we've clearly left
+        if(crossingArmed && d2 <= TOL_GEOFENCE && since >= TOL_MINLAP){
+          doLap("geofence");
+        }
+      }
+    }
+  }
+  lastFix = fix;
+
+  // Smooth pace and render
+  if(secPerKm){
+    paceBuf.push(secPerKm); if(paceBuf.length>5) paceBuf.shift();
+    const avg = paceBuf.reduce((a,b)=>a+b,0)/paceBuf.length; renderPace(avg);
+  }
+}
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371000, toRad=d=>d*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+function renderPace(secPerKm){
+  const el=paceEl;
+  if(!paceGoal){ el.textContent="--:--/km"; el.className="big pace"; return; }
+  const m=Math.floor(secPerKm/60), s=Math.round(secPerKm%60);
+  el.textContent = `${m}:${pad2(s)}/km`;
+  const delta = secPerKm - paceGoal;
+  let cls="p-green";
+  if(delta>0 && delta<=10) cls="p-yellow";
+  else if(delta>10 && delta<=20) cls="p-orange";
+  else if(delta>20) cls="p-red";
+  el.className = "big pace " + cls;
+}
+
+/* Haptics (if supported) */
+function vibrate(ms){ if(navigator.vibrate){ try{ navigator.vibrate(ms); }catch(e){} } }
+
+</script>
+</body>
+</html>
