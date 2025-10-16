@@ -1,0 +1,281 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HYROX Race-Pace Coach</title>
+<style>
+  :root{
+    --bg:#0f172a;        /* slate-900 */
+    --card:#111827;      /* gray-900 */
+    --acc:#22d3ee;       /* cyan-400 */
+    --text:#e5e7eb;      /* gray-200 */
+    --muted:#94a3b8;     /* slate-400 */
+    --chip:#1f2937;      /* gray-800 */
+    --ok:#34d399;        /* green-400 */
+    --warn:#fbbf24;      /* amber-400 */
+    --danger:#f87171;    /* red-400 */
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    background: radial-gradient(1200px 600px at 50% -10%, #0b1228 0%, var(--bg) 40%);
+    color: var(--text);
+    padding: 20px 16px 32px;
+  }
+  header{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    margin-bottom:18px;
+  }
+  .brand{
+    display:flex;align-items:center;gap:12px;
+  }
+  .logo{
+    width:44px;height:44px;border-radius:12px;
+    background: linear-gradient(135deg, #06b6d4, #3b82f6);
+    display:grid;place-items:center; font-weight:800; color:white; letter-spacing:0.5px;
+    box-shadow: 0 8px 30px rgba(34,211,238,.35);
+  }
+  h1{font-size:18px;margin:0;line-height:1.15}
+  .sub{color:var(--muted);font-size:12px;margin-top:2px}
+  select{
+    appearance:none; -webkit-appearance:none;
+    width:100%; padding:14px 14px; border-radius:12px;
+    background: rgba(255,255,255,0.04); border:1px solid rgba(148,163,184,.25);
+    color:var(--text); font-size:16px; outline:none;
+    backdrop-filter: blur(6px);
+  }
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+    border:1px solid rgba(148,163,184,.25);
+    border-radius:16px; padding:16px; margin-top:16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  }
+  .section-title{
+    font-weight:700; font-size:14px; letter-spacing:.4px; text-transform:uppercase;
+    color:#9eeaf3; margin:10px 0 8px;
+  }
+  .title{
+    font-weight:800; font-size:18px; margin:0 0 6px; color:white;
+  }
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 6px;}
+  .chip{
+    background:var(--chip); color:#cbd5e1; font-size:12px; padding:6px 10px;
+    border:1px solid rgba(148,163,184,.25);
+    border-radius:999px;
+  }
+  .grid{display:grid; gap:10px}
+  @media(min-width:600px){ .grid{grid-template-columns:1fr 1fr} }
+  .kv{display:flex; align-items:center; justify-content:space-between; gap:6px;
+    background: rgba(255,255,255,.03); padding:10px 12px; border-radius:12px;
+    border:1px solid rgba(148,163,184,.15);
+  }
+  .kv b{font-size:13px}
+  .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;}
+  .note{color:var(--muted); font-size:13px; margin-top:8px}
+  footer{margin-top:22px; color:var(--muted); font-size:12px; text-align:center}
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    background:linear-gradient(135deg, rgba(34,211,238,.15), rgba(59,130,246,.15));
+    border:1px solid rgba(148,163,184,.25);
+    color:#e6f9ff; padding:10px 12px; border-radius:12px; text-decoration:none; font-weight:700; font-size:14px;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">H</div>
+      <div>
+        <h1>HYROX Race‑Pace Coach</h1>
+        <div class="sub">Track plan • Recovery • HR zones (Max HR 183)</div>
+      </div>
+    </div>
+    <a class="btn" href="#" onclick="installInstructions()">Add to Home</a>
+  </header>
+
+  <div class="card">
+    <div class="section-title">Select Date</div>
+    <select id="datePicker" onchange="renderDay()"></select>
+    <div class="note">Tip: Save to your Home Screen for 1‑tap access at the track.</div>
+  </div>
+
+  <div id="content"></div>
+
+  <footer>© 2025 Personal workbook for Bill • Built by ChatGPT</footer>
+
+<script>
+// --- Plan Data (Oct 14 → Nov 22, 2025) ---
+const workouts = {
+  // Week 1
+  "2025-10-14": {title:"Track #1 — Threshold Intervals", main:"5 × 1km @ 4:45–4:50/km", rest:"75–90s jog/walk; start next rep ~130–140 bpm", notes:"Focus smooth cadence ~180 spm, upright posture.", chips:["Pace","Threshold","Run Economy"]},
+  "2025-10-16": {title:"Track #2 — Fatigue Simulation", main:"3 × (800m @ 4:45/km + 10 wall balls + 200m jog)", rest:"90s between rounds", notes:"Control breathing post-stations; run relaxed.", chips:["Stations","Transition","Rhythm"]},
+  "2025-10-19": {title:"Hyrox Gym — Mock Race #1", main:"Full simulation", rest:"Full recovery next day", notes:"Log splits & HR recovery at 2/5/10 min.", chips:["Simulation","Benchmark"]},
+
+  // Week 2
+  "2025-10-21": {title:"Track #1 — Race-Pace Build", main:"6 × 800m @ 4:30–4:40/km", rest:"75s jog", notes:"Even pacing; last rep ≤ first +3s.", chips:["Race Pace","Consistency"]},
+  "2025-10-23": {title:"Track #2 — Ladder Simulation", main:"4 × (1km @ 4:35/km + sled push 20m + 200m jog)", rest:"~2 min", notes:"Leg drive on sled; run tall after.", chips:["Sled","Threshold"]},
+  "2025-10-26": {title:"Hyrox Gym — Ladder #1", main:"Progressive stations + runs", rest:"Aerobic control", notes:"Stay sub-redline; prioritize form.", chips:["Endurance","Form"]},
+
+  // Week 3
+  "2025-10-28": {title:"Track #1 — Threshold Rehearsal", main:"4 × 1km @ 4:25–4:30/km", rest:"90s jog/walk", notes:"Hold steady; nasal exhales on recovery.", chips:["Threshold","Control"]},
+  "2025-10-30": {title:"Track #2 — Fatigue Combo", main:"4 × (1km @ 4:25/km + 15 wall balls + farmers carry 20m)", rest:"90s", notes:"Core tight; re-accelerate smoothly.", chips:["Combo","Core","Grip"]},
+  "2025-11-02": {title:"Hyrox Gym — Ladder #2", main:"Medium‑intensity endurance focus", rest:"Aerobic", notes:"Practice efficient transitions.", chips:["Endurance","Transitions"]},
+
+  // Week 4
+  "2025-11-04": {title:"Track #1 — Race-Pace Intervals", main:"5 × 1km @ 4:15–4:20/km", rest:"75s jog", notes:"Hit rhythm; no sprinting early.", chips:["Race Pace","Rhythm"]},
+  "2025-11-06": {title:"Track #2 — Lactate Control", main:"4 × (800m @ 4:10–4:15/km + 10 burpees + 200m jog)", rest:"90s", notes:"Stay relaxed under high HR; quick resets.", chips:["Tolerance","Cadence"]},
+  "2025-11-09": {title:"Hyrox Gym — Mock Race #2", main:"Full simulation", rest:"Back off volume next 24–48h", notes:"Assess readiness; note weak points.", chips:["Simulation","Assessment"]},
+
+  // Week 5 (Sharpening)
+  "2025-11-11": {title:"Track #1 — Speed Rehearsal", main:"8 × 400m @ 4:00/km + 3 × 200m @ 3:50/km", rest:"60s between reps", notes:"Fast feet; perfect form.", chips:["Speed","Form"]},
+  "2025-11-13": {title:"Track #2 — Controlled Tempo", main:"3 × 1.2km @ 4:10–4:15/km", rest:"90s", notes:"Breathing ladder 3‑3 → 2‑2 on harder reps.", chips:["Tempo","Economy"]},
+  "2025-11-16": {title:"Hyrox Gym — Regular (−25% volume)", main:"Stations + runs (reduced)", rest:"Prioritize freshness", notes:"Keep something in the tank.", chips:["Taper","Freshness"]},
+
+  // Week 6 (Taper)
+  "2025-11-18": {title:"Track #1 — Sharpen", main:"3 × 400m @ 4:00/km + 3 × 100m strides", rest:"90s between 400s", notes:"Snappy, not grindy.", chips:["Sharp","Neuromuscular"]},
+  "2025-11-20": {title:"Track #2 — Light Pace Touch", main:"2 × 1km @ 4:10/km + easy jog", rest:"Full recovery between", notes:"Relaxed; leave plenty in reserve.", chips:["Taper","Relaxed"]},
+  "2025-11-22": {title:"RACE DAY — HYROX", main:"Execute + have fun", rest:"—", notes:"4:00–4:15/km target between stations. Fuel & breathe.", chips:["Peak","Execute"]}
+};
+
+// Recovery playbook (general based on weekday)
+const recoveryByDay = {
+  0: { // Sunday
+    recovery: "Sauna 30 min post‑Hyrox. Evening breathwork 20 min (4–6 in / 6–8 out). Protein + Creatine HMB after.",
+    extras: ["Hydrate + electrolytes", "Mobility 10–15 min"]
+  },
+  1: { // Monday
+    recovery: "Optional breathwork 20 min before bed. Light mobility 10–15 min.",
+    extras: ["Zone 2 or rest", "Sleep 8h"]
+  },
+  2: { // Tuesday
+    recovery: "Track day: cool‑down jog 1–2 km. Post‑run protein + SuperBeets. Evening: light stretching.",
+    extras: ["If strength day instead: Sauna 30 min post‑strength"]
+  },
+  3: { // Wednesday
+    recovery: "Optional easy sauna 20 min. Walk or swim easy 20–30 min.",
+    extras: ["Keep HR low (Zone 1–2)"]
+  },
+  4: { // Thursday
+    recovery: "Fatigue simulation day: cool‑down 1 km. Protein + Creatine HMB + Sunfiber. Legs up 10–15 min.",
+    extras: ["Breathwork 10 min box or slow nasal"]
+  },
+  5: { // Friday
+    recovery: "Zone 2 (30–45 min) or rest. Evening breathwork 20 min.",
+    extras: ["Foam roll 8–10 min"]
+  },
+  6: { // Saturday
+    recovery: "Sauna 30 min post‑strength. Cold rinse optional. Carb‑forward dinner for Sunday.",
+    extras: ["Sleep 8h"]
+  }
+};
+
+// HR zone hints
+const hrZones = "HR Zones (Max 183): Z3 128–146 • Z4 146–165 • Z5 165–183";
+
+function pad(n){return n.toString().padStart(2,'0')}
+
+function init(){
+  const start = new Date("2025-10-14");
+  const end   = new Date("2025-11-22");
+  const sel = document.getElementById("datePicker");
+
+  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+    const y = d.getFullYear(), m = pad(d.getMonth()+1), da = pad(d.getDate());
+    const key = `${y}-${m}-${da}`;
+    const opt = document.createElement("option");
+    const weekday = d.toLocaleDateString(undefined,{weekday:"short"});
+    const label = `${weekday} ${m}/${da}`;
+    opt.value = key;
+    opt.textContent = label + (workouts[key] ? "" : " • (General day)");
+    sel.appendChild(opt);
+  }
+  // Default to today if in range, else first day
+  const today = new Date();
+  if(today >= new Date("2025-10-14") && today <= new Date("2025-11-22")){
+    const tk = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+    sel.value = tk;
+  }else{
+    sel.selectedIndex = 0;
+  }
+  renderDay();
+}
+
+function renderDay(){
+  const sel = document.getElementById("datePicker");
+  const key = sel.value;
+  const d = new Date(key+"T00:00:00");
+  const weekday = d.toLocaleDateString(undefined,{weekday:"long"});
+  const wd = d.getDay(); // 0 Sun ... 6 Sat
+  const container = document.getElementById("content");
+  container.innerHTML = "";
+
+  const card = document.createElement("div");
+  card.className = "card";
+
+  const w = workouts[key];
+  const section = document.createElement("div");
+  section.innerHTML = `
+    <div class="section-title">Plan for ${weekday}</div>
+    <h2 class="title">${w ? w.title : 'General Day'}</h2>
+    <div class="chips">${(w ? w.chips : ['Recovery','Mobility']).map(c=>`<span class="chip">${c}</span>`).join('')}</div>
+    <div class="grid">
+      <div class="kv"><b>Workout</b><span class="mono">${w ? w.main : defaultMain(wd)}</span></div>
+      <div class="kv"><b>Rest</b><span class="mono">${w ? w.rest : defaultRest(wd)}</span></div>
+      <div class="kv"><b>HR Focus</b><span class="mono">${w ? 'Z4–Z5 on reps' : defaultHR(wd)}</span></div>
+      <div class="kv"><b>Notes</b><span class="mono">${w ? w.notes : defaultNotes(wd)}</span></div>
+    </div>
+    <div class="section-title">Recovery</div>
+    <div class="kv"><b>Today</b><span class="mono">${(recoveryByDay[wd]||{}).recovery || "Easy walk, mobility, and sleep 8h"}</span></div>
+    <div class="kv"><b>Extras</b><span class="mono">${(recoveryByDay[wd]||{}).extras ? (recoveryByDay[wd].extras.join(' • ')) : "Hydrate • Protein • Light stretch"}</span></div>
+    <div class="note">${hrZones}</div>
+  `;
+  card.appendChild(section);
+  container.appendChild(card);
+}
+
+function defaultMain(wd){
+  switch(wd){
+    case 1: return "Strength session (Hyrox gym)";
+    case 2: return "Track #1 – Speed/Threshold (see week plan)";
+    case 3: return "Recovery / Mobility / Optional swim";
+    case 4: return "Track #2 – Fatigue Simulation (run + stations)";
+    case 5: return "Zone 2 aerobic 30–45 min or Rest";
+    case 6: return "Strength + Endurance combo";
+    case 0: return "Hyrox Gym Day";
+    default: return "Training per weekly structure";
+  }
+}
+function defaultRest(wd){
+  switch(wd){
+    case 2: return "1km reps: 75–90s jog • 400s: 60s • 1.2km: 90s";
+    case 4: return "90s between rounds; jog 200m between blocks";
+    default: return "Easy between sets; keep HR easy";
+  }
+}
+function defaultHR(wd){
+  switch(wd){
+    case 2: return "Z4–Z5 on reps, Z2 on recoveries";
+    case 4: return "Z4 on reps, recoveries to Z2–Z3";
+    case 5: return "Z2 throughout (conversational)";
+    default: return "Z1–Z2 recovery focus";
+  }
+}
+function defaultNotes(wd){
+  switch(wd){
+    case 2: return "Cadence ~180 spm • Upright posture • Even splits";
+    case 4: return "Breathe steady after stations • Re‑accelerate smoothly";
+    default: return "Hydrate, light mobility, quality sleep";
+  }
+}
+
+function installInstructions(){
+  alert("iPhone: Tap the Share icon → 'Add to Home Screen'.\nAndroid (Chrome): Menu ⋮ → 'Add to Home screen'.");
+}
+
+init();
+</script>
+</body>
+</html>
