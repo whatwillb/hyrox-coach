@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-<title>HYROX Watch Coach — v8</title>
+<title>HYROX Watch Coach — v11 (BFT Integrated)</title>
 <style>
   :root{
     --bg:#000; --ink:#fff; --muted:#9aa3ad;
     --btn-blue:#2563eb;
     --btn-green:#16a34a;
-    --btn-green-dark:#0f5132; /* Pause */
+    --btn-green-dark:#0f5132;
     --btn-gray:#374151;
     --btn-purple:#7c3aed;
     --btn-red:#dc2626;
@@ -17,11 +17,15 @@
     --pace-green:#10ff9c; --pace-yellow:#ffe45e; --pace-orange:#ff8a3d; --pace-red:#ff3b30;
     --go-green:#22c55e;
     --rest-red:#ff3b30;
+    --info-run:#22c55e;      /* green */
+    --info-class:#60a5fa;    /* blue */
+    --info-rest:#9ca3af;     /* gray */
+    --info-hyrox:#f59e0b;    /* amber */
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system, SF Pro Text, Inter, Roboto, Arial}
   .wrap{padding:12px 14px 120px}
-  .card{border-radius:20px;padding:14px;margin-bottom:14px} /* no outlines */
+  .card{border-radius:20px;padding:14px;margin-bottom:14px}
   .label{font-size:14px;color:var(--muted)}
   .big{font-weight:900;font-variant-numeric:tabular-nums}
   .pace{font-size:60px;line-height:1.05}
@@ -36,7 +40,7 @@
   .hidden{display:none}
 
   .btn{width:100%;border:none;border-radius:20px;color:#fff;font-weight:800;
-       font-size:26px; padding:22px 18px; display:flex; align-items:center; justify-content:center; gap:10px}
+       font-size:34px; padding:28px 18px; display:flex; align-items:center; justify-content:center; gap:10px}
   .btn:active{transform:scale(0.98)}
   .btn-blue{background:var(--btn-blue)}
   .btn-green{background:var(--btn-green)}
@@ -60,12 +64,19 @@
   .go{font-size:12vh; font-weight:900; color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.15)}
 
   .dow{font-size:18px; color:var(--muted); padding:8px 12px; border-radius:12px; background:#0b0b0b}
+  .title{font-size:20px; font-weight:900; color:#cbd5e1; margin-bottom:8px}
+
+  .info-line{font-size:22px; font-weight:900}
+  .tag-run{color:var(--info-run)}
+  .tag-class{color:var(--info-class)}
+  .tag-rest{color:var(--info-rest)}
+  .tag-hyrox{color:var(--info-hyrox)}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <!-- Pace (rest replaces this; unit becomes REST) -->
+  <!-- Pace / Rest replacement -->
   <div class="card">
     <div class="label">Instant Pace</div>
     <div id="pace" class="big pace">
@@ -86,87 +97,117 @@
         <span id="lapBox">0/0</span> <span style="opacity:.6">•</span> <span id="repBox">0/0</span>
       </div>
     </div>
-
     <div class="row" style="margin-top:12px">
-      <button id="btnStart" class="btn btn-green">▶︎ Start</button>
+      <button id="btnStart" class="btn btn-green">▶︎</button>
       <button id="btnReset" class="btn btn-gray" aria-label="Reset">↺</button>
     </div>
-
-    <!-- Rest controls: full-width Rest OR (−15s / +15s) -->
     <div id="restControls" class="row-full" style="margin-top:12px">
       <button id="btnRest" class="btn btn-purple">⏲️ Rest</button>
     </div>
-
     <div class="kv mono" style="margin-top:10px">
       <div class="label">Auto‑Lap</div>
       <div id="autoLapSwitch" class="switch"><div class="thumb"></div></div>
     </div>
   </div>
 
-  <!-- Workout & date (with Day-of-Week) -->
+  <!-- Workout Info + Date -->
   <div class="card">
-    <div class="row" style="margin-bottom:12px">
-      <button id="prev" class="btn btn-gray">◀︎ Prev</button>
-      <button id="next" class="btn btn-gray">Next ▶︎</button>
-    </div>
-
+    <div class="title">Workout Info</div>
     <div class="row" style="grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:10px">
       <input id="date" type="date" style="width:100%;padding:18px;border-radius:18px;background:#0b0b0b;color:#e8ecf6;font-size:22px;border:none"/>
       <div id="dow" class="dow">—</div>
     </div>
-
     <div class="kv">
       <div class="workhead" id="wTitle">Workout</div>
       <div class="workhead mono" id="wPace">—</div>
     </div>
     <div class="kv">
-      <div class="workhead mono" id="wPresc">—</div>
+      <div id="wUnified" class="info-line"><span class="tag-rest">Rest:</span> —</div>
       <div class="workhead mono" id="wRest">—</div>
     </div>
     <div class="kv">
       <div class="workhead">250m Adjust</div>
       <div class="workhead mono" id="wAdj">—</div>
     </div>
+    <div class="row" style="margin-top:12px">
+      <button id="prev" class="btn btn-gray">◀︎</button>
+      <button id="next" class="btn btn-gray">▶︎</button>
+    </div>
   </div>
 
 </div>
 
-<!-- Sticky LAP button (hidden when Auto‑Lap is ON) -->
 <div class="sticky-lap" id="lapBar">
   <button id="btnLap" class="btn btn-blue">➕ LAP +1</button>
 </div>
 
-<!-- GO overlay -->
 <div class="overlay" id="goOverlay"><div class="go">GO!</div></div>
 
 <script>
-/* -------- PLAN DATA -------- */
+/* ---------- Integrated PLAN (Mon 2025-10-13 → Sun 2025-11-23) ---------- */
+// type: 'run' | 'class' | 'rest' | 'hyrox'
+// pace_s_per_km for run days; intervals for track breakdown when applicable.
 const PLAN = {
-  "2025-10-14": {type:"run", title:"Threshold 5×1km", pace_s_per_km:290, intervals:[{dist_m:1000,reps:5,rest_s:80}]},
-  "2025-10-16": {type:"run", title:"Fatigue 3×800m", pace_s_per_km:285, intervals:[{dist_m:800,reps:3,rest_s:90}]},
-  "2025-10-19": {type:"gym", title:"Mock Race #1"},
-  "2025-10-21": {type:"run", title:"Race-Pace 6×800m", pace_s_per_km:275, intervals:[{dist_m:800,reps:6,rest_s:75}]},
-  "2025-10-23": {type:"run", title:"Ladder 4×1km", pace_s_per_km:275, intervals:[{dist_m:1000,reps:4,rest_s:120}]},
-  "2025-10-26": {type:"gym", title:"Strength + Endurance Combo"},
-  "2025-10-28": {type:"run", title:"Threshold 4×1km", pace_s_per_km:270, intervals:[{dist_m:1000,reps:4,rest_s:90}]},
-  "2025-10-30": {type:"run", title:"Combo 4×1km", pace_s_per_km:265, intervals:[{dist_m:1000,reps:4,rest_s:90}]},
-  "2025-11-02": {type:"gym", title:"Ladder #2 (Gym Circuit)"},
-  "2025-11-04": {type:"run", title:"Race-Pace 5×1km", pace_s_per_km:255, intervals:[{dist_m:1000,reps:5,rest_s:75}]},
-  "2025-11-06": {type:"run", title:"Lactate 4×800m", pace_s_per_km:252, intervals:[{dist_m:800,reps:4,rest_s:90}]},
-  "2025-11-09": {type:"gym", title:"Mock Race #2"},
-  "2025-11-11": {type:"run", title:"Speed 8×400m + 3×200m", pace_s_per_km:240, intervals:[{dist_m:400,reps:8,rest_s:60},{dist_m:200,reps:3,rest_s:60}]},
-  "2025-11-13": {type:"run", title:"Tempo 3×1.2km", pace_s_per_km:252, intervals:[{dist_m:1200,reps:3,rest_s:90}]},
-  "2025-11-16": {type:"gym", title:"Hyrox (−25%) Taper Session"},
-  "2025-11-18": {type:"run", title:"Sharpen 3×400m", pace_s_per_km:240, intervals:[{dist_m:400,reps:3,rest_s:90}]},
-  "2025-11-20": {type:"run", title:"Light 2×1km", pace_s_per_km:250, intervals:[{dist_m:1000,reps:2,rest_s:120}]},
-  "2025-11-22": {type:"race", title:"RACE DAY"}
+  /* Week 0 */
+  "2025-10-13": {type:"class", title:"Class: BFT (Strength/Hyper if available)", details:"If not offered, do mobility + core"},
+  "2025-10-14": {type:"run", title:"Run: Threshold 5×1km @ 4:30→4:15/km", pace_s_per_km: 255, intervals:[{dist_m:1000,reps:5,rest_s:80}]},
+  "2025-10-15": {type:"rest", title:"Rest: Recovery / Mobility / Optional easy class"},
+  "2025-10-16": {type:"run", title:"Run: 3×800m @ ~4:10/km", pace_s_per_km: 250, intervals:[{dist_m:800,reps:3,rest_s:90}]},
+  "2025-10-17": {type:"class", title:"Class: BFT – Cardio U (keep Z2 or skip if heavy)"},
+  "2025-10-18": {type:"rest", title:"Rest: Mobility + Sauna + Breathwork (easy)"},
+  "2025-10-19": {type:"hyrox", title:"HYROX: Mock Race #1"},
+
+  /* Week 1 */
+  "2025-10-20": {type:"class", title:"Class: BFT – Hyper (power; moderate volume)"},
+  "2025-10-21": {type:"run", title:"Run: 6×800m @ ~4:10/km", pace_s_per_km: 250, intervals:[{dist_m:800,reps:6,rest_s:75}]},
+  "2025-10-22": {type:"class", title:"Class: BFT – Strength (upper/mixed; crisp technique)"},
+  "2025-10-23": {type:"run", title:"Run: Ladder 4×1km (4:15→4:05/km)", pace_s_per_km: 247, intervals:[{dist_m:1000,reps:4,rest_s:120}]},
+  "2025-10-24": {type:"class", title:"Class: BFT – Pump (strength-endurance; Hyrox-relevant)"},
+  "2025-10-25": {type:"rest", title:"Rest: Easy recovery"},
+  "2025-10-26": {type:"hyrox", title:"HYROX: Ladder #1"},
+
+  /* Week 2 */
+  "2025-10-27": {type:"class", title:"Class: BFT – Strength"},
+  "2025-10-28": {type:"run", title:"Run: Threshold 4×1km @ ~4:10/km", pace_s_per_km: 250, intervals:[{dist_m:1000,reps:4,rest_s:90}]},
+  "2025-10-29": {type:"class", title:"Class: BFT – Cardio HIIT (optional easy or mobility)"},
+  "2025-10-30": {type:"run", title:"Run: Combo 4×1km @ ~4:05/km", pace_s_per_km: 245, intervals:[{dist_m:1000,reps:4,rest_s:90}]},
+  "2025-10-31": {type:"class", title:"Class: BFT – Cardio Summit (optional Z2 or rest)"},
+  "2025-11-01": {type:"rest", title:"Rest: Mobility / Sauna + Breathwork"},
+  "2025-11-02": {type:"hyrox", title:"HYROX: Ladder #2"},
+
+  /* Week 3 */
+  "2025-11-03": {type:"rest", title:"Rest: Skip BFT Beast Mode — do Primer Mobility + Activation"},
+  "2025-11-04": {type:"run", title:"Run: 5×1km Race Pace @ ~4:05/km", pace_s_per_km: 245, intervals:[{dist_m:1000,reps:5,rest_s:75}]},
+  "2025-11-05": {type:"class", title:"Class: BFT – Cardio Summit (very easy)"},
+  "2025-11-06": {type:"run", title:"Run: 4×800m Lactate @ ~4:00/km", pace_s_per_km: 240, intervals:[{dist_m:800,reps:4,rest_s:90}]},
+  "2025-11-07": {type:"class", title:"Class: BFT – Cardio U (optional Z2)"},
+  "2025-11-08": {type:"rest", title:"Rest: Easy recovery"},
+  "2025-11-09": {type:"hyrox", title:"HYROX: Mock Race #2"},
+
+  /* Week 4 */
+  "2025-11-10": {type:"class", title:"Class: BFT – Strength (moderate)"},
+  "2025-11-11": {type:"run", title:"Run: Speed 8×400m + 3×200m (3:55–4:05/km feel)", pace_s_per_km: 240, intervals:[{dist_m:400,reps:8,rest_s:60},{dist_m:200,reps:3,rest_s:60}]},
+  "2025-11-12": {type:"class", title:"Class: BFT – Hyper (reduce volume)"},
+  "2025-11-13": {type:"run", title:"Run: Tempo 3×1.2km @ ~4:10/km", pace_s_per_km: 250, intervals:[{dist_m:1200,reps:3,rest_s:90}]},
+  "2025-11-14": {type:"class", title:"Class: BFT – Balanced (taper-friendly)"},
+  "2025-11-15": {type:"rest", title:"Rest: Recovery"},
+  "2025-11-16": {type:"hyrox", title:"HYROX: Taper Session (−25% volume)"},
+
+  /* Week 5 — Race Week */
+  "2025-11-17": {type:"rest", title:"Rest: Skip BFT Beast Mode — Primer only"},
+  "2025-11-18": {type:"run", title:"Run: Sharpen 3×400m @ ~4:00/km (long rests)", pace_s_per_km: 240, intervals:[{dist_m:400,reps:3,rest_s:90}]},
+  "2025-11-19": {type:"rest", title:"Rest: Skip BFT Cardio HIIT — mobility"},
+  "2025-11-20": {type:"run", title:"Run: Light 2×1km @ 4:05–4:15/km (relaxed)", pace_s_per_km: 247, intervals:[{dist_m:1000,reps:2,rest_s:120}]},
+  "2025-11-21": {type:"rest", title:"Rest: Avoid BFT Cardio Summit — walk + mobility"},
+  "2025-11-22": {type:"hyrox", title:"HYROX: RACE DAY"},
+  "2025-11-23": {type:"rest", title:"Rest: Easy walk + gentle mobility (post‑race)"}
 };
 
 /* ---------- Helpers ---------- */
 const pad2 = n=>String(n).padStart(2,'0');
 const secToPace = s=>`${Math.floor(s/60)}:${pad2(Math.round(s%60))}`;
 const adjustTo250 = m=>{const laps=Math.max(1, Math.round(m/250)); return {laps, meters:laps*250};}
-const clampDate = d=>{const min=new Date("2025-10-14"), max=new Date("2025-11-22"); if(d<min) return min; if(d>max) return max; return d;}
+const clampDate = d=>{const min=new Date("2025-10-13"), max=new Date("2025-11-23"); if(d<min) return min; if(d>max) return max; return d;}
 function haversine(lat1,lon1,lat2,lon2){
   const R=6371000, toRad=d=>d*Math.PI/180;
   const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
@@ -223,7 +264,7 @@ const paceEl=document.getElementById('pace'), paceVal=document.getElementById('p
 const timerBox=document.getElementById('timerBox');
 const lapBox=document.getElementById('lapBox');
 const repBox=document.getElementById('repBox');
-const wTitle=document.getElementById('wTitle'), wPace=document.getElementById('wPace'), wPresc=document.getElementById('wPresc'), wRest=document.getElementById('wRest'), wAdj=document.getElementById('wAdj');
+const wTitle=document.getElementById('wTitle'), wPace=document.getElementById('wPace'), wUnified=document.getElementById('wUnified'), wAdj=document.getElementById('wAdj');
 const dowEl=document.getElementById('dow');
 const dateInput=document.getElementById('date');
 const goOverlay=document.getElementById('goOverlay');
@@ -241,7 +282,7 @@ let swTimer=null, startRef=0, elapsed=0;
 let restTimer=null, restRemaining=0, showingRest=false;
 let autoLapEnabled=false;
 const LAP_METERS=250, TOL_DIST=12, TOL_GEOFENCE=18, TOL_MINLAP=35;
-let currentPlan=null, currentIntervalIndex=0;
+let currentPlan=null;
 let repDone=0, repTotal=0;
 let lapCurNum=0, lapTargetNum=0;
 let lastFix=null, distSinceLap=0, lastLapTime=0;
@@ -249,12 +290,12 @@ let startGeo=null, crossingArmed=true;
 let paceBuf=[]; let paceGoal=null;
 
 /* ---------- Init ---------- */
-dateInput.min="2025-10-14"; dateInput.max="2025-11-22";
+dateInput.min="2025-10-13"; dateInput.max="2025-11-23";
 const today=clampDate(new Date());
 dateInput.value = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
 dowEl.textContent = dayOfWeekStr(dateInput.value);
 
-// Prime audio on first user gesture
+// Prime audio once
 ['touchstart','mousedown','click'].forEach(ev=>document.addEventListener(ev, ensureAudio, {once:true}));
 
 btnStart.addEventListener('click', ()=>{ buzz(V_TAP); toggleStart(); });
@@ -282,67 +323,84 @@ function shiftDate(inc){
   renderDay();
 }
 function renderDay(){
-  const key=dateInput.value; const w=PLAN[key];
+  const key=dateInput.value; 
+  const w = PLAN[key];
   currentPlan = w || null;
-  currentIntervalIndex = 0;
-  repDone = 0;
-  if(w && w.type==="run"){
-    const set = w.intervals[0];
-    repTotal = set.reps;
-    const a = adjustTo250(set.dist_m);
-    lapCurNum = 0; lapTargetNum = a.laps;
-  } else {
-    repTotal=0; lapCurNum=0; lapTargetNum=0;
+
+  // Defaults
+  wTitle.textContent = "—"; wPace.textContent="—"; wAdj.textContent="—";
+  repDone=0; repTotal=0; lapCurNum=0; lapTargetNum=0; paceGoal=null;
+
+  if(!w){
+    wUnified.innerHTML = `<span class="tag-rest">Rest:</span> —`;
+    goalEl.textContent="--:--/km";
+    updateCounters();
+    resetTimersOnly();
+    resetLapTracking();
+    return;
   }
 
-  if(w){
-    wTitle.textContent = w.title;
-    if(w.type==="run"){
-      const pr = w.intervals.map(iv=>`${iv.reps}×${iv.dist_m}m`).join(" + ");
-      const adj = w.intervals.map(iv=>{const aa=adjustTo250(iv.dist_m); return `${iv.reps}×${aa.meters}m(${aa.laps} laps)`}).join(" + ");
-      const rests = [...new Set(w.intervals.map(iv=>iv.rest_s))];
-      wPresc.textContent = pr; wAdj.textContent = adj; wRest.textContent = rests.map(s=>s+"s").join("/");
-      paceGoal = w.pace_s_per_km || null; wPace.textContent = paceGoal ? (secToPace(paceGoal)+"/km") : "—"; goalEl.textContent = wPace.textContent;
-    } else {
-      // Non‑run day: show title in prescription; rest/adjust blank
-      wPresc.textContent = w.title;
-      wAdj.textContent = "—"; wRest.textContent = "—";
-      paceGoal=null; wPace.textContent="—"; goalEl.textContent="--:--/km";
-    }
+  // Unified line + coloring
+  let tagClass = "tag-rest";
+  let label = "Rest:";
+  if(w.type==="run"){ tagClass="tag-run"; label="Run:"; paceGoal = w.pace_s_per_km || null; }
+  if(w.type==="class"){ tagClass="tag-class"; label="Class:"; }
+  if(w.type==="hyrox"){ tagClass="tag-hyrox"; label="HYROX:"; }
+  wUnified.innerHTML = `<span class="${tagClass}">${label}</span> ${w.title.replace(/^(\w+:)\s*/,'')}`;
+
+  // Title & goal display
+  wTitle.textContent = w.title.split(":")[0]; // leading category as title
+  goalEl.textContent = paceGoal ? (secToPace(paceGoal)+"/km") : "--:--/km";
+
+  // If run, fill intervals + laps (first set only shown for counters)
+  if(w.type==="run" && w.intervals && w.intervals.length){
+    const set = w.intervals[0];
+    repTotal = set.reps || 0;
+    const adj = adjustTo250(set.dist_m || 0);
+    lapCurNum = 0; lapTargetNum = adj.laps;
+    wPace.textContent = paceGoal ? (secToPace(paceGoal)+"/km") : "—";
+    // show all intervals total adjust summary
+    const adjText = w.intervals.map(iv=>{
+      const aa = adjustTo250(iv.dist_m);
+      return `${iv.reps}×${aa.meters}m (${aa.laps} laps)`;
+    }).join(" + ");
+    wAdj.textContent = adjText || "—";
   } else {
-    wTitle.textContent = "—"; wPresc.textContent="—"; wAdj.textContent="—"; wRest.textContent="—"; wPace.textContent="—"; goalEl.textContent="--:--/km";
+    wPace.textContent = "—";
+    wAdj.textContent = "—";
   }
+
+  // Show/hide lap bar if non-run
+  document.getElementById('runTools').style.display = (w.type==="run" ? "" : "");
+  lapBar.style.display = (autoLapEnabled || w.type!=="run") ? (autoLapEnabled ? "none" : (w.type!=="run" ? "none" : "")) : "";
 
   updateCounters();
   resetTimersOnly();
   resetLapTracking();
 }
-
-/* ---------- Counters ---------- */
 function updateCounters(){
-  lapBox.textContent = `${lapCurNum}/${lapTargetNum}`;
-  repBox.textContent = `${repDone}/${repTotal}`;
+  document.getElementById('lapBox').textContent = `${lapCurNum}/${lapTargetNum}`;
+  document.getElementById('repBox').textContent = `${repDone}/${repTotal}`;
 }
 
 /* ---------- Timers ---------- */
 function resetTimersOnly(){
   if(swTimer){ clearInterval(swTimer); swTimer=null; }
-  elapsed=0; timerBox.textContent="00:00.0"; btnStart.textContent="▶︎ Start"; btnStart.className="btn btn-green";
+  elapsed=0; timerBox.textContent="00:00.0"; btnStart.textContent="▶︎"; btnStart.className="btn btn-green";
   if(restTimer){ clearInterval(restTimer); restTimer=null; }
   restRemaining=0; showingRest=false;
-  renderPaceDisplay(); // show pace again
+  renderPaceDisplay();
   wireRestIdleUI();
   hideGo();
 }
 function resetAll(){
   resetTimersOnly();
   const w=currentPlan;
-  if(w && w.type==="run"){
-    const set = w.intervals[0];
-    repDone=0; repTotal=set.reps;
-    const a=adjustTo250(set.dist_m); lapCurNum=0; lapTargetNum=a.laps;
+  if(w && w.type==="run" && w.intervals && w.intervals.length){
+    const a=adjustTo250(w.intervals[0].dist_m);
+    repDone=0; lapCurNum=0; lapTargetNum=a.laps;
   } else {
-    repDone=0; repTotal=0; lapCurNum=0; lapTargetNum=0;
+    repDone=0; lapCurNum=0; lapTargetNum=0;
   }
   updateCounters();
   resetLapTracking();
@@ -351,7 +409,7 @@ function resetAll(){
 function toggleStart(){
   if(swTimer){
     clearInterval(swTimer); swTimer=null; elapsed=performance.now()-startRef;
-    btnStart.textContent="▶︎ Start"; btnStart.className="btn btn-green"; buzz(40); return;
+    btnStart.textContent="▶︎"; btnStart.className="btn btn-green"; buzz(40); return;
   }
   startRef = performance.now() - (elapsed||0);
   swTimer = setInterval(()=>{
@@ -361,10 +419,10 @@ function toggleStart(){
   }, 100);
   lastLapTime = performance.now();
   distSinceLap = 0;
-  btnStart.textContent="⏸ Pause"; btnStart.className="btn btn-green-dark"; buzz(40);
+  btnStart.textContent="⏸"; btnStart.className="btn btn-green-dark"; buzz(40);
 }
 
-/* ---------- Rest UI/logic ---------- */
+/* ---------- Rest UI ---------- */
 function wireRestIdleUI(){
   restControls.innerHTML = "";
   const btn = document.createElement('button');
@@ -386,23 +444,24 @@ function wireRestActiveUI(){
   restControls.appendChild(row);
 }
 function startRest(){
-  const w=currentPlan;
-  if(!w || w.type!=="run") return;
-  const curSet = w.intervals[currentIntervalIndex];
-  const defaultRest = curSet.rest_s || 60;
+  const w=currentPlan || {};
+  let defaultRest = 120; // 2:00 default
+  if(w.type==="run" && w.intervals && w.intervals.length){
+    defaultRest = (w.intervals[0].rest_s || 60);
+  }
   restRemaining = defaultRest;
   showingRest = true;
   wireRestActiveUI();
-  renderPaceDisplay(); // big rest countdown replaces pace
+  renderPaceDisplay();
   if(restTimer) clearInterval(restTimer);
   restTimer = setInterval(()=>{
     restRemaining -= 1;
     if(restRemaining <= 0){
       clearInterval(restTimer); restTimer = null; showingRest=false;
       wireRestIdleUI();
-      if(lastFix){ startGeo={lat:lastFix.lat, lon:lastFix.lon}; crossingArmed=false; } // mark per-rep start
+      if(lastFix){ startGeo={lat:lastFix.lat, lon:lastFix.lon}; crossingArmed=false; }
       showGo(); setTimeout(hideGo, 1200);
-      renderPaceDisplay(); // back to pace
+      renderPaceDisplay();
     } else {
       renderPaceDisplay();
     }
@@ -410,34 +469,24 @@ function startRest(){
 }
 
 /* ---------- Laps & Reps ---------- */
-function doLap(src){
+function doLap(){
   if(!currentPlan || currentPlan.type!=="run") return;
   lapCurNum += 1;
   updateCounters();
   lastLapTime = performance.now();
   distSinceLap = 0;
-  buzz(V_LAP); // haptic/beep
+  buzz(V_LAP);
   if(lapCurNum >= lapTargetNum){
     repDone += 1;
     lapCurNum = 0;
     updateCounters();
-    buzz(V_REP); // triple
+    buzz(V_REP);
     startRest();
     const w=currentPlan;
-    const curSet = w.intervals[currentIntervalIndex];
-    if(repDone >= curSet.reps){
-      if(currentIntervalIndex+1 < w.intervals.length){
-        currentIntervalIndex += 1;
-        repDone = 0;
-        const nextSet = w.intervals[currentIntervalIndex];
-        repTotal = nextSet.reps;
-        const a = adjustTo250(nextSet.dist_m);
-        lapTargetNum = a.laps; lapCurNum = 0;
-        updateCounters();
-      } else {
-        alert("Workout complete!");
-        resetAll();
-      }
+    const curSet = (w.intervals && w.intervals[0]) ? w.intervals[0] : null;
+    if(curSet && repDone >= curSet.reps){
+      alert("Workout complete!");
+      resetAll();
     }
   }
 }
@@ -445,9 +494,8 @@ function doLap(src){
 /* ---------- GPS + Pace + Auto-lap ---------- */
 function initGPS(){
   if(!navigator.geolocation) return;
-  navigator.geolocation.watchPosition(onPos, onPosErr, {enableHighAccuracy:true, maximumAge:500, timeout:10000});
+  navigator.geolocation.watchPosition(onPos, ()=>{}, {enableHighAccuracy:true, maximumAge:500, timeout:10000});
 }
-function onPosErr(e){ /* ignore on watch */ }
 function onPos(pos){
   const {latitude, longitude, speed, accuracy} = pos.coords;
   const ts = pos.timestamp;
@@ -466,14 +514,14 @@ function onPos(pos){
     if(autoLapEnabled && swTimer){
       const now = performance.now();
       const since = (now - lastLapTime)/1000;
-      if(since >= TOL_MINLAP && Math.abs(distSinceLap - LAP_METERS) <= TOL_DIST){
-        doLap("dist");
+      if(since >= 35 && Math.abs(distSinceLap - 250) <= 12){
+        doLap();
       }
       if(startGeo){
         const d2 = haversine(startGeo.lat, startGeo.lon, fix.lat, fix.lon);
-        if(d2 > (TOL_GEOFENCE*1.5)) crossingArmed = true;
-        if(crossingArmed && d2 <= TOL_GEOFENCE && since >= TOL_MINLAP){
-          doLap("geofence");
+        if(d2 > (18*1.5)) crossingArmed = true;
+        if(crossingArmed && d2 <= 18 && since >= 35){
+          doLap();
           crossingArmed = false;
         }
       }
