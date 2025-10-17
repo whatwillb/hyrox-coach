@@ -3,40 +3,44 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-<title>HYROX Watch Coach — v4</title>
+<title>HYROX Watch Coach — v8</title>
 <style>
   :root{
-    --bg:#000; --ink:#fff; --muted:#9aa3ad; --line:#2a2f3b;
-    --btn-blue:#2563eb;   /* LAP */
-    --btn-green:#16a34a;  /* START */
-    --btn-gray:#374151;   /* RESET/SECONDARY */
-    --btn-purple:#7c3aed; /* REST */
-    --btn-red:#dc2626;    /* -15s */
-    --btn-yellow:#fde047; /* +15s */
+    --bg:#000; --ink:#fff; --muted:#9aa3ad;
+    --btn-blue:#2563eb;
+    --btn-green:#16a34a;
+    --btn-green-dark:#0f5132; /* Pause */
+    --btn-gray:#374151;
+    --btn-purple:#7c3aed;
+    --btn-red:#dc2626;
+    --btn-yellow:#fde047;
     --pace-green:#10ff9c; --pace-yellow:#ffe45e; --pace-orange:#ff8a3d; --pace-red:#ff3b30;
     --go-green:#22c55e;
+    --rest-red:#ff3b30;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system, SF Pro Text, Inter, Roboto, Arial}
   .wrap{padding:12px 14px 120px}
-  .card{border:1px solid var(--line);border-radius:20px;padding:14px;margin-bottom:14px}
+  .card{border-radius:20px;padding:14px;margin-bottom:14px} /* no outlines */
   .label{font-size:14px;color:var(--muted)}
   .big{font-weight:900;font-variant-numeric:tabular-nums}
-  .pace{font-size:60px;line-height:1.05}    /* +20% */
+  .pace{font-size:60px;line-height:1.05}
+  .pace .unit{font-size:.33em; margin-left:6px; vertical-align:baseline; font-weight:800}
   .goal{font-size:18px;color:var(--muted)}
-  .timer{font-size:28px;font-weight:900}    /* ~half of 60px pace */
-  .workhead{font-size:22px;font-weight:900} /* bigger workout/date info */
+  .timer{font-size:28px;font-weight:900}
+  .workhead{font-size:22px;font-weight:900}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .row-full{display:grid;grid-template-columns:1fr;gap:14px}
   .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
-  .kv{display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px dashed var(--line);border-radius:14px}
+  .kv{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
   .hidden{display:none}
 
-  /* Big colored buttons (larger) */
   .btn{width:100%;border:none;border-radius:20px;color:#fff;font-weight:800;
        font-size:26px; padding:22px 18px; display:flex; align-items:center; justify-content:center; gap:10px}
   .btn:active{transform:scale(0.98)}
   .btn-blue{background:var(--btn-blue)}
   .btn-green{background:var(--btn-green)}
+  .btn-green-dark{background:var(--btn-green-dark)}
   .btn-gray{background:var(--btn-gray)}
   .btn-purple{background:var(--btn-purple)}
   .btn-red{background:var(--btn-red)}
@@ -46,32 +50,35 @@
   .p-green{color:var(--pace-green)} .p-yellow{color:var(--pace-yellow)}
   .p-orange{color:var(--pace-orange)} .p-red{color:var(--pace-red)}
 
-  .switch{position:relative; width:80px; height:40px; background:#222; border-radius:999px; border:1px solid var(--line);}
+  .switch{position:relative; width:80px; height:40px; background:#222; border-radius:999px;}
   .thumb{position:absolute; width:36px; height:36px; border-radius:50%; top:2px; left:2px; background:#777; transition:all .2s}
-  .switch.on{background:#14532d; border-color:#1f7a46}
+  .switch.on{background:#14532d}
   .switch.on .thumb{left:42px; background:#22c55e}
 
-  /* GO! overlay: full-screen green */
   .overlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:99; background:var(--go-green)}
   .overlay.show{display:flex}
-  .go{font-size:12vh; font-weight:900; color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.15)} /* huge (~4x prior) */
+  .go{font-size:12vh; font-weight:900; color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.15)}
+
+  .dow{font-size:18px; color:var(--muted); padding:8px 12px; border-radius:12px; background:#0b0b0b}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <!-- Pace (replaced by big REST countdown during rest) -->
+  <!-- Pace (rest replaces this; unit becomes REST) -->
   <div class="card">
     <div class="label">Instant Pace</div>
-    <div id="pace" class="big pace">--:--/km</div>
+    <div id="pace" class="big pace">
+      <span id="paceVal">--:--</span><span id="paceUnit" class="unit">/km</span>
+    </div>
     <div class="goal">Goal <span id="goal">--:--/km</span></div>
   </div>
 
-  <!-- Timer + Lap/Rep (same row) -->
+  <!-- Timer + Lap/Rep -->
   <div id="runTools" class="card">
     <div class="kv">
       <div class="label">Timer</div>
-      <div id="timerBox" class="timer mono">00:00.0</div>
+      <div><span id="timerBox" class="timer mono">00:00.0</span></div>
     </div>
     <div class="kv">
       <div class="label">Lap / Rep</div>
@@ -82,29 +89,32 @@
 
     <div class="row" style="margin-top:12px">
       <button id="btnStart" class="btn btn-green">▶︎ Start</button>
-      <button id="btnReset" class="btn btn-gray">↺ Reset</button>
+      <button id="btnReset" class="btn btn-gray" aria-label="Reset">↺</button>
     </div>
 
-    <!-- Rest controls container: single Rest OR (-15s / +15s) -->
-    <div id="restControls" class="row" style="margin-top:12px">
+    <!-- Rest controls: full-width Rest OR (−15s / +15s) -->
+    <div id="restControls" class="row-full" style="margin-top:12px">
       <button id="btnRest" class="btn btn-purple">⏲️ Rest</button>
-      <div></div>
     </div>
 
-    <!-- Auto‑Lap switch -->
     <div class="kv mono" style="margin-top:10px">
       <div class="label">Auto‑Lap</div>
       <div id="autoLapSwitch" class="switch"><div class="thumb"></div></div>
     </div>
   </div>
 
-  <!-- Workout & date -->
+  <!-- Workout & date (with Day-of-Week) -->
   <div class="card">
     <div class="row" style="margin-bottom:12px">
       <button id="prev" class="btn btn-gray">◀︎ Prev</button>
       <button id="next" class="btn btn-gray">Next ▶︎</button>
     </div>
-    <input id="date" type="date" style="width:100%;padding:18px;border-radius:18px;border:1px solid var(--line);background:#0b0b0b;color:#e8ecf6;font-size:22px"/>
+
+    <div class="row" style="grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:10px">
+      <input id="date" type="date" style="width:100%;padding:18px;border-radius:18px;background:#0b0b0b;color:#e8ecf6;font-size:22px;border:none"/>
+      <div id="dow" class="dow">—</div>
+    </div>
+
     <div class="kv">
       <div class="workhead" id="wTitle">Workout</div>
       <div class="workhead mono" id="wPace">—</div>
@@ -137,16 +147,16 @@ const PLAN = {
   "2025-10-19": {type:"gym", title:"Mock Race #1"},
   "2025-10-21": {type:"run", title:"Race-Pace 6×800m", pace_s_per_km:275, intervals:[{dist_m:800,reps:6,rest_s:75}]},
   "2025-10-23": {type:"run", title:"Ladder 4×1km", pace_s_per_km:275, intervals:[{dist_m:1000,reps:4,rest_s:120}]},
-  "2025-10-26": {type:"gym", title:"Ladder #1"},
+  "2025-10-26": {type:"gym", title:"Strength + Endurance Combo"},
   "2025-10-28": {type:"run", title:"Threshold 4×1km", pace_s_per_km:270, intervals:[{dist_m:1000,reps:4,rest_s:90}]},
   "2025-10-30": {type:"run", title:"Combo 4×1km", pace_s_per_km:265, intervals:[{dist_m:1000,reps:4,rest_s:90}]},
-  "2025-11-02": {type:"gym", title:"Ladder #2"},
+  "2025-11-02": {type:"gym", title:"Ladder #2 (Gym Circuit)"},
   "2025-11-04": {type:"run", title:"Race-Pace 5×1km", pace_s_per_km:255, intervals:[{dist_m:1000,reps:5,rest_s:75}]},
   "2025-11-06": {type:"run", title:"Lactate 4×800m", pace_s_per_km:252, intervals:[{dist_m:800,reps:4,rest_s:90}]},
   "2025-11-09": {type:"gym", title:"Mock Race #2"},
   "2025-11-11": {type:"run", title:"Speed 8×400m + 3×200m", pace_s_per_km:240, intervals:[{dist_m:400,reps:8,rest_s:60},{dist_m:200,reps:3,rest_s:60}]},
   "2025-11-13": {type:"run", title:"Tempo 3×1.2km", pace_s_per_km:252, intervals:[{dist_m:1200,reps:3,rest_s:90}]},
-  "2025-11-16": {type:"gym", title:"Hyrox (−25%)"},
+  "2025-11-16": {type:"gym", title:"Hyrox (−25%) Taper Session"},
   "2025-11-18": {type:"run", title:"Sharpen 3×400m", pace_s_per_km:240, intervals:[{dist_m:400,reps:3,rest_s:90}]},
   "2025-11-20": {type:"run", title:"Light 2×1km", pace_s_per_km:250, intervals:[{dist_m:1000,reps:2,rest_s:120}]},
   "2025-11-22": {type:"race", title:"RACE DAY"}
@@ -154,7 +164,7 @@ const PLAN = {
 
 /* ---------- Helpers ---------- */
 const pad2 = n=>String(n).padStart(2,'0');
-const secToPace = s=>`${Math.floor(s/60)}:${pad2(Math.round(s%60))}/km`;
+const secToPace = s=>`${Math.floor(s/60)}:${pad2(Math.round(s%60))}`;
 const adjustTo250 = m=>{const laps=Math.max(1, Math.round(m/250)); return {laps, meters:laps*250};}
 const clampDate = d=>{const min=new Date("2025-10-14"), max=new Date("2025-11-22"); if(d<min) return min; if(d>max) return max; return d;}
 function haversine(lat1,lon1,lat2,lon2){
@@ -163,15 +173,58 @@ function haversine(lat1,lon1,lat2,lon2){
   const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
   return 2*R*Math.asin(Math.sqrt(a));
 }
-function buzz(msOrPattern){ if(navigator.vibrate){ try{ navigator.vibrate(msOrPattern); }catch(e){} } }
-const V_LAP=40; const V_REP=[120,80,120,80,120]; const V_GO=500;
+function dayOfWeekStr(dateStr){
+  const d = new Date(dateStr+"T00:00:00");
+  return d.toLocaleDateString(undefined,{ weekday:'long' });
+}
+
+/* ---------- Haptics / Audio Fallback ---------- */
+let audioCtx=null;
+function ensureAudio(){
+  if(audioCtx) { try{ audioCtx.resume(); }catch(e){} return; }
+  try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audioCtx=null; }
+}
+function beep(duration=80, freq=520){
+  if(!audioCtx) return;
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.connect(g); g.connect(audioCtx.destination);
+  o.type="square"; o.frequency.value=freq;
+  o.start();
+  g.gain.setValueAtTime(0.18, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+duration/1000);
+  setTimeout(()=>{o.stop();}, duration);
+}
+function buzz(pattern){
+  let vibbed=false;
+  if(navigator.vibrate){
+    try{ if(Array.isArray(pattern)) { navigator.vibrate(pattern); vibbed=true; } else { navigator.vibrate(pattern||60); vibbed=true; } }catch(e){}
+  }
+  if(!vibbed){
+    ensureAudio();
+    if(!audioCtx) return;
+    if(Array.isArray(pattern)){
+      let t=0;
+      pattern.forEach((p,i)=>{
+        setTimeout(()=>beep(70, i%2?560:480), t);
+        t += p;
+      });
+    } else {
+      beep(Math.min(pattern||80, 250));
+    }
+  }
+}
+const V_TAP=40;
+const V_LAP=70;
+const V_REP=[130,90,130,90,130];
+const V_GO=600;
 
 /* ---------- Elements ---------- */
-const paceEl=document.getElementById('pace'), goalEl=document.getElementById('goal');
+const paceEl=document.getElementById('pace'), paceVal=document.getElementById('paceVal'), paceUnit=document.getElementById('paceUnit'), goalEl=document.getElementById('goal');
 const timerBox=document.getElementById('timerBox');
 const lapBox=document.getElementById('lapBox');
 const repBox=document.getElementById('repBox');
 const wTitle=document.getElementById('wTitle'), wPace=document.getElementById('wPace'), wPresc=document.getElementById('wPresc'), wRest=document.getElementById('wRest'), wAdj=document.getElementById('wAdj');
+const dowEl=document.getElementById('dow');
 const dateInput=document.getElementById('date');
 const goOverlay=document.getElementById('goOverlay');
 const btnStart=document.getElementById('btnStart');
@@ -184,15 +237,13 @@ const lapBar=document.getElementById('lapBar');
 const restControls=document.getElementById('restControls');
 
 /* ---------- State ---------- */
-let swTimer=null, startRef=0, elapsed=0; // stopwatch
+let swTimer=null, startRef=0, elapsed=0;
 let restTimer=null, restRemaining=0, showingRest=false;
 let autoLapEnabled=false;
 const LAP_METERS=250, TOL_DIST=12, TOL_GEOFENCE=18, TOL_MINLAP=35;
-
 let currentPlan=null, currentIntervalIndex=0;
 let repDone=0, repTotal=0;
 let lapCurNum=0, lapTargetNum=0;
-
 let lastFix=null, distSinceLap=0, lastLapTime=0;
 let startGeo=null, crossingArmed=true;
 let paceBuf=[]; let paceGoal=null;
@@ -201,23 +252,25 @@ let paceBuf=[]; let paceGoal=null;
 dateInput.min="2025-10-14"; dateInput.max="2025-11-22";
 const today=clampDate(new Date());
 dateInput.value = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
+dowEl.textContent = dayOfWeekStr(dateInput.value);
 
-btnStart.addEventListener('click', toggleStart);
-btnReset.addEventListener('click', resetAll);
-prevBtn.addEventListener('click', ()=>shiftDate(-1));
-nextBtn.addEventListener('click', ()=>shiftDate(1));
-dateInput.addEventListener('change', renderDay);
-btnLap.addEventListener('click', ()=>doLap('manual'));
+// Prime audio on first user gesture
+['touchstart','mousedown','click'].forEach(ev=>document.addEventListener(ev, ensureAudio, {once:true}));
+
+btnStart.addEventListener('click', ()=>{ buzz(V_TAP); toggleStart(); });
+btnReset.addEventListener('click', ()=>{ buzz(V_TAP); resetAll(); });
+prevBtn.addEventListener('click', ()=>{ buzz(V_TAP); shiftDate(-1); });
+nextBtn.addEventListener('click', ()=>{ buzz(V_TAP); shiftDate(1); });
+dateInput.addEventListener('change', ()=>{ buzz(V_TAP); dowEl.textContent = dayOfWeekStr(dateInput.value); renderDay(); });
+btnLap.addEventListener('click', ()=>{ buzz(V_TAP); doLap('manual'); });
 autoLapSwitch.addEventListener('click', ()=>{
+  buzz(V_TAP);
   autoLapEnabled = !autoLapEnabled;
   autoLapSwitch.classList.toggle('on', autoLapEnabled);
   lapBar.style.display = autoLapEnabled ? 'none' : '';
-  buzz(60);
 });
 
-// Rest controls: start with "Rest" only
 wireRestIdleUI();
-
 renderDay();
 initGPS();
 
@@ -225,6 +278,7 @@ initGPS();
 function shiftDate(inc){
   const d=new Date(dateInput.value+"T00:00:00"); d.setDate(d.getDate()+inc);
   dateInput.value = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+  dowEl.textContent = dayOfWeekStr(dateInput.value);
   renderDay();
 }
 function renderDay(){
@@ -241,17 +295,22 @@ function renderDay(){
     repTotal=0; lapCurNum=0; lapTargetNum=0;
   }
 
-  wTitle.textContent = w ? w.title : "—";
-  if(w && w.type==="run"){
-    const pr = w.intervals.map(iv=>`${iv.reps}×${iv.dist_m}m`).join(" + ");
-    const adj = w.intervals.map(iv=>{const aa=adjustTo250(iv.dist_m); return `${iv.reps}×${aa.meters}m(${aa.laps} laps)`}).join(" + ");
-    const rests = [...new Set(w.intervals.map(iv=>iv.rest_s))];
-    wPresc.textContent = pr; wAdj.textContent = adj; wRest.textContent = rests.map(s=>s+"s").join("/");
-    paceGoal = w.pace_s_per_km || null; wPace.textContent = paceGoal ? secToPace(paceGoal) : "—"; goalEl.textContent = wPace.textContent;
+  if(w){
+    wTitle.textContent = w.title;
+    if(w.type==="run"){
+      const pr = w.intervals.map(iv=>`${iv.reps}×${iv.dist_m}m`).join(" + ");
+      const adj = w.intervals.map(iv=>{const aa=adjustTo250(iv.dist_m); return `${iv.reps}×${aa.meters}m(${aa.laps} laps)`}).join(" + ");
+      const rests = [...new Set(w.intervals.map(iv=>iv.rest_s))];
+      wPresc.textContent = pr; wAdj.textContent = adj; wRest.textContent = rests.map(s=>s+"s").join("/");
+      paceGoal = w.pace_s_per_km || null; wPace.textContent = paceGoal ? (secToPace(paceGoal)+"/km") : "—"; goalEl.textContent = wPace.textContent;
+    } else {
+      // Non‑run day: show title in prescription; rest/adjust blank
+      wPresc.textContent = w.title;
+      wAdj.textContent = "—"; wRest.textContent = "—";
+      paceGoal=null; wPace.textContent="—"; goalEl.textContent="--:--/km";
+    }
   } else {
-    wPresc.textContent = w ? (w.type==="gym"?"Gym / stations":"—") : "—";
-    wAdj.textContent = "—"; wRest.textContent = "—";
-    paceGoal=null; wPace.textContent="—"; goalEl.textContent="--:--/km";
+    wTitle.textContent = "—"; wPresc.textContent="—"; wAdj.textContent="—"; wRest.textContent="—"; wPace.textContent="—"; goalEl.textContent="--:--/km";
   }
 
   updateCounters();
@@ -271,7 +330,7 @@ function resetTimersOnly(){
   elapsed=0; timerBox.textContent="00:00.0"; btnStart.textContent="▶︎ Start"; btnStart.className="btn btn-green";
   if(restTimer){ clearInterval(restTimer); restTimer=null; }
   restRemaining=0; showingRest=false;
-  renderPaceDisplay();   // show pace again
+  renderPaceDisplay(); // show pace again
   wireRestIdleUI();
   hideGo();
 }
@@ -297,13 +356,12 @@ function toggleStart(){
   startRef = performance.now() - (elapsed||0);
   swTimer = setInterval(()=>{
     const t=performance.now()-startRef; elapsed=t;
-    // Timer box always shows stopwatch; pace area may switch to rest countdown
     const ms=Math.floor((t%1000)/100), s=Math.floor(t/1000)%60, m=Math.floor(t/60000);
     timerBox.textContent = `${pad2(m)}:${pad2(s)}.${ms}`;
   }, 100);
   lastLapTime = performance.now();
   distSinceLap = 0;
-  btnStart.textContent="⏸ Pause"; btnStart.className="btn btn-green"; buzz(40);
+  btnStart.textContent="⏸ Pause"; btnStart.className="btn btn-green-dark"; buzz(40);
 }
 
 /* ---------- Rest UI/logic ---------- */
@@ -311,26 +369,22 @@ function wireRestIdleUI(){
   restControls.innerHTML = "";
   const btn = document.createElement('button');
   btn.id = "btnRest"; btn.className = "btn btn-purple"; btn.textContent = "⏲️ Rest";
-  btn.addEventListener('click', startRest);
+  btn.addEventListener('click', ()=>{ buzz(V_TAP); startRest(); });
   restControls.appendChild(btn);
-  const spacer = document.createElement('div');
-  restControls.appendChild(spacer);
 }
-
 function wireRestActiveUI(){
   restControls.innerHTML = "";
+  const row = document.createElement('div');
+  row.className="row";
   const minus = document.createElement('button');
   minus.id="restMinus"; minus.className="btn btn-red"; minus.textContent="−15s";
-  minus.addEventListener('click', ()=>{ restRemaining=Math.max(0, restRemaining-15); renderPaceDisplay(); });
-
+  minus.addEventListener('click', ()=>{ buzz(V_TAP); restRemaining=Math.max(0, restRemaining-15); renderPaceDisplay(); });
   const plus = document.createElement('button');
   plus.id="restPlus"; plus.className="btn btn-yellow"; plus.textContent="+15s";
-  plus.addEventListener('click', ()=>{ restRemaining=Math.min(600, restRemaining+15); renderPaceDisplay(); });
-
-  restControls.appendChild(minus);
-  restControls.appendChild(plus);
+  plus.addEventListener('click', ()=>{ buzz(V_TAP); restRemaining=Math.min(600, restRemaining+15); renderPaceDisplay(); });
+  row.appendChild(minus); row.appendChild(plus);
+  restControls.appendChild(row);
 }
-
 function startRest(){
   const w=currentPlan;
   if(!w || w.type!=="run") return;
@@ -339,15 +393,14 @@ function startRest(){
   restRemaining = defaultRest;
   showingRest = true;
   wireRestActiveUI();
-  renderPaceDisplay(); // show BIG rest countdown in the pace area
+  renderPaceDisplay(); // big rest countdown replaces pace
   if(restTimer) clearInterval(restTimer);
   restTimer = setInterval(()=>{
     restRemaining -= 1;
     if(restRemaining <= 0){
       clearInterval(restTimer); restTimer = null; showingRest=false;
       wireRestIdleUI();
-      // Mark start geofence at GO! for precise per-rep laps
-      if(lastFix){ startGeo={lat:lastFix.lat, lon:lastFix.lon}; crossingArmed=false; }
+      if(lastFix){ startGeo={lat:lastFix.lat, lon:lastFix.lon}; crossingArmed=false; } // mark per-rep start
       showGo(); setTimeout(hideGo, 1200);
       renderPaceDisplay(); // back to pace
     } else {
@@ -363,14 +416,12 @@ function doLap(src){
   updateCounters();
   lastLapTime = performance.now();
   distSinceLap = 0;
-  buzz(V_LAP); // single buzz for lap
-
+  buzz(V_LAP); // haptic/beep
   if(lapCurNum >= lapTargetNum){
     repDone += 1;
     lapCurNum = 0;
     updateCounters();
-    // triple buzz to signal rep ended + start rest
-    buzz(V_REP);
+    buzz(V_REP); // triple
     startRest();
     const w=currentPlan;
     const curSet = w.intervals[currentIntervalIndex];
@@ -396,8 +447,7 @@ function initGPS(){
   if(!navigator.geolocation) return;
   navigator.geolocation.watchPosition(onPos, onPosErr, {enableHighAccuracy:true, maximumAge:500, timeout:10000});
 }
-function onPosErr(e){ /* ignore for watch */ }
-
+function onPosErr(e){ /* ignore on watch */ }
 function onPos(pos){
   const {latitude, longitude, speed, accuracy} = pos.coords;
   const ts = pos.timestamp;
@@ -421,8 +471,8 @@ function onPos(pos){
       }
       if(startGeo){
         const d2 = haversine(startGeo.lat, startGeo.lon, fix.lat, fix.lon);
-        if(d2 > (18*1.5)) crossingArmed = true;
-        if(crossingArmed && d2 <= 18 && since >= TOL_MINLAP){
+        if(d2 > (TOL_GEOFENCE*1.5)) crossingArmed = true;
+        if(crossingArmed && d2 <= TOL_GEOFENCE && since >= TOL_MINLAP){
           doLap("geofence");
           crossingArmed = false;
         }
@@ -440,17 +490,21 @@ function onPos(pos){
 
 function renderPaceDisplay(secPerKm){
   if(showingRest){
-    paceEl.textContent = formatSec(restRemaining);
-    paceEl.className = "big pace"; // neutral color during rest
+    paceVal.textContent = formatSec(restRemaining);
+    paceUnit.textContent = "REST";
+    paceUnit.style.color = "var(--rest-red)";
+    paceEl.className = "big pace";
     return;
   }
+  paceUnit.textContent = "/km";
+  paceUnit.style.color = "";
   if(!paceGoal || secPerKm==null){
-    paceEl.textContent="--:--/km";
+    paceVal.textContent="--:--";
     paceEl.className="big pace";
     return;
   }
   const m=Math.floor(secPerKm/60), s=Math.round(secPerKm%60);
-  paceEl.textContent = `${m}:${pad2(s)}/km`;
+  paceVal.textContent = `${m}:${pad2(s)}`;
   const delta = secPerKm - paceGoal;
   let cls="p-green";
   if(delta>0 && delta<=10) cls="p-yellow";
@@ -459,13 +513,8 @@ function renderPaceDisplay(secPerKm){
   paceEl.className = "big pace " + cls;
 }
 
-function formatSec(s){
-  const m=Math.floor(s/60), ss=s%60;
-  return `${m}:${String(ss).padStart(2,"0")}`;
-}
-
-/* ---------- Lap tracking reset + GO overlay ---------- */
-function resetLapTracking(){ distSinceLap = 0; lastLapTime = performance.now(); /* startGeo set at GO! */ }
+function formatSec(s){ const m=Math.floor(s/60), ss=s%60; return `${m}:${String(ss).padStart(2,"0")}`; }
+function resetLapTracking(){ distSinceLap = 0; lastLapTime = performance.now(); }
 function showGo(){ goOverlay.classList.add("show"); buzz(V_GO); }
 function hideGo(){ goOverlay.classList.remove("show"); }
 </script>
