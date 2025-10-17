@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-<title>HYROX Watch Coach — v11 (BFT Integrated)</title>
+<title>HYROX Watch Coach — v12 (Guided Coaching)</title>
 <style>
   :root{
     --bg:#000; --ink:#fff; --muted:#9aa3ad;
@@ -33,6 +33,7 @@
   .goal{font-size:18px;color:var(--muted)}
   .timer{font-size:28px;font-weight:900}
   .workhead{font-size:22px;font-weight:900}
+  .desc{font-size:18px; color:#b0b8c3; margin-top:6px; line-height:1.3}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .row-full{display:grid;grid-template-columns:1fr;gap:14px}
   .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
@@ -125,6 +126,7 @@
       <div id="wUnified" class="info-line"><span class="tag-rest">Rest:</span> —</div>
       <div class="workhead mono" id="wRest">—</div>
     </div>
+    <div class="desc" id="wDesc">—</div>
     <div class="kv">
       <div class="workhead">250m Adjust</div>
       <div class="workhead mono" id="wAdj">—</div>
@@ -144,63 +146,54 @@
 <div class="overlay" id="goOverlay"><div class="go">GO!</div></div>
 
 <script>
-/* ---------- Integrated PLAN (Mon 2025-10-13 → Sun 2025-11-23) ---------- */
-// type: 'run' | 'class' | 'rest' | 'hyrox'
-// pace_s_per_km for run days; intervals for track breakdown when applicable.
 const PLAN = {
-  /* Week 0 */
-  "2025-10-13": {type:"class", title:"Class: BFT (Strength/Hyper if available)", details:"If not offered, do mobility + core"},
-  "2025-10-14": {type:"run", title:"Run: Threshold 5×1km @ 4:30→4:15/km", pace_s_per_km: 255, intervals:[{dist_m:1000,reps:5,rest_s:80}]},
-  "2025-10-15": {type:"rest", title:"Rest: Recovery / Mobility / Optional easy class"},
-  "2025-10-16": {type:"run", title:"Run: 3×800m @ ~4:10/km", pace_s_per_km: 250, intervals:[{dist_m:800,reps:3,rest_s:90}]},
-  "2025-10-17": {type:"class", title:"Class: BFT – Cardio U (keep Z2 or skip if heavy)"},
-  "2025-10-18": {type:"rest", title:"Rest: Mobility + Sauna + Breathwork (easy)"},
-  "2025-10-19": {type:"hyrox", title:"HYROX: Mock Race #1"},
+  "2025-10-13": {type:"class", title:"Class: BFT (Strength/Hyper if available)", desc:"If no suitable class, do 20–30 min mobility + core; keep effort easy."},
+  "2025-10-14": {type:"run", title:"Run: Threshold 5×1km @ 4:30→4:15/km", pace_s_per_km:255, intervals:[{dist_m:1000,reps:5,rest_s:80}], desc:"Warm up 10 min; run 5×1 km steady; start near 4:30/km and finish near 4:15/km; 80 s walk/jog between reps."},
+  "2025-10-15": {type:"rest", title:"Rest: Recovery / Mobility / Optional easy class", desc:"Walk 20–30 min or light mobility. Sauna + breathwork optional."},
+  "2025-10-16": {type:"run", title:"Run: 3×800m @ ~4:10/km", pace_s_per_km:250, intervals:[{dist_m:800,reps:3,rest_s:90}], desc:"Warm up 10 min; 3×800 m at ~4:10/km pace; 90 s easy between reps. Smooth, relaxed form."},
+  "2025-10-17": {type:"class", title:"Class: BFT – Cardio U (keep Z2 or skip if heavy)", desc:"Low‑intensity cardio. Keep Z1–Z2; exit early if legs feel loaded."},
+  "2025-10-18": {type:"rest", title:"Rest: Mobility + Sauna + Breathwork (easy)", desc:"Easy recovery day. 15–30 min mobility; sauna + nasal breathing."},
+  "2025-10-19": {type:"hyrox", title:"HYROX: Mock Race #1", desc:"Full event flow at steady effort. Practice transitions and pacing."},
 
-  /* Week 1 */
-  "2025-10-20": {type:"class", title:"Class: BFT – Hyper (power; moderate volume)"},
-  "2025-10-21": {type:"run", title:"Run: 6×800m @ ~4:10/km", pace_s_per_km: 250, intervals:[{dist_m:800,reps:6,rest_s:75}]},
-  "2025-10-22": {type:"class", title:"Class: BFT – Strength (upper/mixed; crisp technique)"},
-  "2025-10-23": {type:"run", title:"Run: Ladder 4×1km (4:15→4:05/km)", pace_s_per_km: 247, intervals:[{dist_m:1000,reps:4,rest_s:120}]},
-  "2025-10-24": {type:"class", title:"Class: BFT – Pump (strength-endurance; Hyrox-relevant)"},
-  "2025-10-25": {type:"rest", title:"Rest: Easy recovery"},
-  "2025-10-26": {type:"hyrox", title:"HYROX: Ladder #1"},
+  "2025-10-20": {type:"class", title:"Class: BFT – Hyper (power; moderate volume)", desc:"Emphasize explosive intent with clean form. Keep total sets moderate."},
+  "2025-10-21": {type:"run", title:"Run: 6×800m @ ~4:10/km", pace_s_per_km:250, intervals:[{dist_m:800,reps:6,rest_s:75}], desc:"Warm up 10 min; 6×800 m at ~4:10/km; 75 s jog/walk recoveries. Hold even splits."},
+  "2025-10-22": {type:"class", title:"Class: BFT – Strength (upper/mixed; crisp technique)", desc:"Prioritize quality reps. Avoid failure. Tempo control on eccentric."},
+  "2025-10-23": {type:"run", title:"Run: Ladder 4×1km (4:15→4:05/km)", pace_s_per_km:247, intervals:[{dist_m:1000,reps:4,rest_s:120}], desc:"Warm up 10 min; run 4×1 km, slightly faster each rep (start ~4:15, finish ~4:05). 120 s jog between."},
+  "2025-10-24": {type:"class", title:"Class: BFT – Pump (strength-endurance; Hyrox-relevant)", desc:"High‑rep sets; steady breathing; keep technique tight under fatigue."},
+  "2025-10-25": {type:"rest", title:"Rest: Easy recovery", desc:"Walk or light spin 20–30 min. Gentle hips/ankles mobility."},
+  "2025-10-26": {type:"hyrox", title:"HYROX: Ladder #1", desc:"Station ladders with controlled pacing. Aim steady RPE and smooth transitions."},
 
-  /* Week 2 */
-  "2025-10-27": {type:"class", title:"Class: BFT – Strength"},
-  "2025-10-28": {type:"run", title:"Run: Threshold 4×1km @ ~4:10/km", pace_s_per_km: 250, intervals:[{dist_m:1000,reps:4,rest_s:90}]},
-  "2025-10-29": {type:"class", title:"Class: BFT – Cardio HIIT (optional easy or mobility)"},
-  "2025-10-30": {type:"run", title:"Run: Combo 4×1km @ ~4:05/km", pace_s_per_km: 245, intervals:[{dist_m:1000,reps:4,rest_s:90}]},
-  "2025-10-31": {type:"class", title:"Class: BFT – Cardio Summit (optional Z2 or rest)"},
-  "2025-11-01": {type:"rest", title:"Rest: Mobility / Sauna + Breathwork"},
-  "2025-11-02": {type:"hyrox", title:"HYROX: Ladder #2"},
+  "2025-10-27": {type:"class", title:"Class: BFT – Strength", desc:"Main lifts first. Moderate load, quality movement. Stop fresh."},
+  "2025-10-28": {type:"run", title:"Run: Threshold 4×1km @ ~4:10/km", pace_s_per_km:250, intervals:[{dist_m:1000,reps:4,rest_s:90}], desc:"Warm up 10 min; 4×1 km at ~4:10/km; 90 s jog. Run tall, smooth cadence."},
+  "2025-10-29": {type:"class", title:"Class: BFT – Cardio HIIT (optional easy or mobility)", desc:"If attending, keep sub‑threshold. Otherwise choose mobility today."},
+  "2025-10-30": {type:"run", title:"Run: Combo 4×1km @ ~4:05/km", pace_s_per_km:245, intervals:[{dist_m:1000,reps:4,rest_s:90}], desc:"Warm up 10 min; 4×1 km near race pace; 90 s jog. Don't sprint; stay efficient."},
+  "2025-10-31": {type:"class", title:"Class: BFT – Cardio Summit (optional Z2 or rest)", desc:"Keep it easy Z2 or take full rest based on fatigue."},
+  "2025-11-01": {type:"rest", title:"Rest: Mobility / Sauna + Breathwork", desc:"15–30 min easy movement. Heat or cold optional with nasal breathing."},
+  "2025-11-02": {type:"hyrox", title:"HYROX: Ladder #2", desc:"Second ladder session. Slightly sharper pacing than #1."},
 
-  /* Week 3 */
-  "2025-11-03": {type:"rest", title:"Rest: Skip BFT Beast Mode — do Primer Mobility + Activation"},
-  "2025-11-04": {type:"run", title:"Run: 5×1km Race Pace @ ~4:05/km", pace_s_per_km: 245, intervals:[{dist_m:1000,reps:5,rest_s:75}]},
-  "2025-11-05": {type:"class", title:"Class: BFT – Cardio Summit (very easy)"},
-  "2025-11-06": {type:"run", title:"Run: 4×800m Lactate @ ~4:00/km", pace_s_per_km: 240, intervals:[{dist_m:800,reps:4,rest_s:90}]},
-  "2025-11-07": {type:"class", title:"Class: BFT – Cardio U (optional Z2)"},
-  "2025-11-08": {type:"rest", title:"Rest: Easy recovery"},
-  "2025-11-09": {type:"hyrox", title:"HYROX: Mock Race #2"},
+  "2025-11-03": {type:"rest", title:"Rest: Skip BFT Beast Mode — do Primer Mobility + Activation", desc:"10–20 min mobility + light activation (glutes/core). No fatigue."},
+  "2025-11-04": {type:"run", title:"Run: 5×1km Race Pace @ ~4:05/km", pace_s_per_km:245, intervals:[{dist_m:1000,reps:5,rest_s:75}], desc:"Warm up 10 min; 5×1 km at race pace; 75 s jog. Hold form under fatigue."},
+  "2025-11-05": {type:"class", title:"Class: BFT – Cardio Summit (very easy)", desc:"Optional easy aerobic. Keep it conversational, exit early if needed."},
+  "2025-11-06": {type:"run", title:"Run: 4×800m Lactate @ ~4:00/km", pace_s_per_km:240, intervals:[{dist_m:800,reps:4,rest_s:90}], desc:"Warm up 10 min; 4×800 m slightly faster; 90 s walk/jog. Smooth, powerful strides."},
+  "2025-11-07": {type:"class", title:"Class: BFT – Cardio U (optional Z2)", desc:"If you go, keep Z2 and short. Otherwise rest."},
+  "2025-11-08": {type:"rest", title:"Rest: Easy recovery", desc:"Walk 20–30 min; stretch calves/hips; hydrate."},
+  "2025-11-09": {type:"hyrox", title:"HYROX: Mock Race #2", desc:"Race simulation. Negative split if possible; practice station rhythms."},
 
-  /* Week 4 */
-  "2025-11-10": {type:"class", title:"Class: BFT – Strength (moderate)"},
-  "2025-11-11": {type:"run", title:"Run: Speed 8×400m + 3×200m (3:55–4:05/km feel)", pace_s_per_km: 240, intervals:[{dist_m:400,reps:8,rest_s:60},{dist_m:200,reps:3,rest_s:60}]},
-  "2025-11-12": {type:"class", title:"Class: BFT – Hyper (reduce volume)"},
-  "2025-11-13": {type:"run", title:"Run: Tempo 3×1.2km @ ~4:10/km", pace_s_per_km: 250, intervals:[{dist_m:1200,reps:3,rest_s:90}]},
-  "2025-11-14": {type:"class", title:"Class: BFT – Balanced (taper-friendly)"},
-  "2025-11-15": {type:"rest", title:"Rest: Recovery"},
-  "2025-11-16": {type:"hyrox", title:"HYROX: Taper Session (−25% volume)"},
+  "2025-11-10": {type:"class", title:"Class: BFT – Strength (moderate)", desc:"Technique first; moderate volume. Stop with 1–2 reps in reserve."},
+  "2025-11-11": {type:"run", title:"Run: Speed 8×400m + 3×200m (3:55–4:05/km feel)", pace_s_per_km:240, intervals:[{dist_m:400,reps:8,rest_s:60},{dist_m:200,reps:3,rest_s:60}], desc:"Warm up 10–12 min; 8×400 m fast but relaxed, 60 s jog; then 3×200 m sharpeners."},
+  "2025-11-12": {type:"class", title:"Class: BFT – Hyper (reduce volume)", desc:"Power focus with low total volume. Keep pop; avoid fatigue."},
+  "2025-11-13": {type:"run", title:"Run: Tempo 3×1.2km @ ~4:10/km", pace_s_per_km:250, intervals:[{dist_m:1200,reps:3,rest_s:90}], desc:"Warm up 10 min; 3×1.2 km at controlled tempo; 90 s jog. Even breathing."},
+  "2025-11-14": {type:"class", title:"Class: BFT – Balanced (taper-friendly)", desc:"General fitness mix; keep easy and technical. Leave fresh."},
+  "2025-11-15": {type:"rest", title:"Rest: Recovery", desc:"Walk, mobility, hydration, good sleep. Short strides optional."},
+  "2025-11-16": {type:"hyrox", title:"HYROX: Taper Session (−25% volume)", desc:"Reduce volume, keep rhythm and clean transitions."},
 
-  /* Week 5 — Race Week */
-  "2025-11-17": {type:"rest", title:"Rest: Skip BFT Beast Mode — Primer only"},
-  "2025-11-18": {type:"run", title:"Run: Sharpen 3×400m @ ~4:00/km (long rests)", pace_s_per_km: 240, intervals:[{dist_m:400,reps:3,rest_s:90}]},
-  "2025-11-19": {type:"rest", title:"Rest: Skip BFT Cardio HIIT — mobility"},
-  "2025-11-20": {type:"run", title:"Run: Light 2×1km @ 4:05–4:15/km (relaxed)", pace_s_per_km: 247, intervals:[{dist_m:1000,reps:2,rest_s:120}]},
-  "2025-11-21": {type:"rest", title:"Rest: Avoid BFT Cardio Summit — walk + mobility"},
-  "2025-11-22": {type:"hyrox", title:"HYROX: RACE DAY"},
-  "2025-11-23": {type:"rest", title:"Rest: Easy walk + gentle mobility (post‑race)"}
+  "2025-11-17": {type:"rest", title:"Rest: Skip BFT Beast Mode — Primer only", desc:"10–15 min mobility + a few crisp activations. No soreness."},
+  "2025-11-18": {type:"run", title:"Run: Sharpen 3×400m @ ~4:00/km (long rests)", pace_s_per_km:240, intervals:[{dist_m:400,reps:3,rest_s:90}], desc:"Warm up 10 min; 3×400 m snappy; long rests. Finish feeling fast, not tired."},
+  "2025-11-19": {type:"rest", title:"Rest: Skip BFT Cardio HIIT — mobility", desc:"Short mobility + easy walk. Mentally rehearse race flow."},
+  "2025-11-20": {type:"run", title:"Run: Light 2×1km @ 4:05–4:15/km (relaxed)", pace_s_per_km:247, intervals:[{dist_m:1000,reps:2,rest_s:120}], desc:"Warm up 8–10 min; 2×1 km at relaxed race rhythm; 2 min jog. Stop fresh."},
+  "2025-11-21": {type:"rest", title:"Rest: Avoid BFT Cardio Summit — walk + mobility", desc:"Easy walk, light stretch, hydrate, carb‑up. Early bedtime."},
+  "2025-11-22": {type:"hyrox", title:"HYROX: RACE DAY", desc:"Arrive early. Full warm‑up. Calm starts; steady splits; clean wall‑balls."},
+  "2025-11-23": {type:"rest", title:"Rest: Easy walk + gentle mobility (post‑race)", desc:"Short walk, light mobility. Rehydrate, protein, feet up."}
 };
 
 /* ---------- Helpers ---------- */
@@ -264,7 +257,7 @@ const paceEl=document.getElementById('pace'), paceVal=document.getElementById('p
 const timerBox=document.getElementById('timerBox');
 const lapBox=document.getElementById('lapBox');
 const repBox=document.getElementById('repBox');
-const wTitle=document.getElementById('wTitle'), wPace=document.getElementById('wPace'), wUnified=document.getElementById('wUnified'), wAdj=document.getElementById('wAdj');
+const wTitle=document.getElementById('wTitle'), wPace=document.getElementById('wPace'), wUnified=document.getElementById('wUnified'), wAdj=document.getElementById('wAdj'), wDesc=document.getElementById('wDesc');
 const dowEl=document.getElementById('dow');
 const dateInput=document.getElementById('date');
 const goOverlay=document.getElementById('goOverlay');
@@ -328,7 +321,7 @@ function renderDay(){
   currentPlan = w || null;
 
   // Defaults
-  wTitle.textContent = "—"; wPace.textContent="—"; wAdj.textContent="—";
+  wTitle.textContent = "—"; wPace.textContent="—"; wAdj.textContent="—"; wDesc.textContent="—";
   repDone=0; repTotal=0; lapCurNum=0; lapTargetNum=0; paceGoal=null;
 
   if(!w){
@@ -347,19 +340,18 @@ function renderDay(){
   if(w.type==="class"){ tagClass="tag-class"; label="Class:"; }
   if(w.type==="hyrox"){ tagClass="tag-hyrox"; label="HYROX:"; }
   wUnified.innerHTML = `<span class="${tagClass}">${label}</span> ${w.title.replace(/^(\w+:)\s*/,'')}`;
+  wDesc.textContent = w.desc || "—";
 
   // Title & goal display
-  wTitle.textContent = w.title.split(":")[0]; // leading category as title
+  wTitle.textContent = w.title.split(":")[0];
   goalEl.textContent = paceGoal ? (secToPace(paceGoal)+"/km") : "--:--/km";
 
-  // If run, fill intervals + laps (first set only shown for counters)
   if(w.type==="run" && w.intervals && w.intervals.length){
     const set = w.intervals[0];
     repTotal = set.reps || 0;
     const adj = adjustTo250(set.dist_m || 0);
     lapCurNum = 0; lapTargetNum = adj.laps;
     wPace.textContent = paceGoal ? (secToPace(paceGoal)+"/km") : "—";
-    // show all intervals total adjust summary
     const adjText = w.intervals.map(iv=>{
       const aa = adjustTo250(iv.dist_m);
       return `${iv.reps}×${aa.meters}m (${aa.laps} laps)`;
@@ -370,10 +362,7 @@ function renderDay(){
     wAdj.textContent = "—";
   }
 
-  // Show/hide lap bar if non-run
-  document.getElementById('runTools').style.display = (w.type==="run" ? "" : "");
-  lapBar.style.display = (autoLapEnabled || w.type!=="run") ? (autoLapEnabled ? "none" : (w.type!=="run" ? "none" : "")) : "";
-
+  lapBar.style.display = (autoLapEnabled || w.type!=="run") ? "none" : "";
   updateCounters();
   resetTimersOnly();
   resetLapTracking();
@@ -445,7 +434,7 @@ function wireRestActiveUI(){
 }
 function startRest(){
   const w=currentPlan || {};
-  let defaultRest = 120; // 2:00 default
+  let defaultRest = 120;
   if(w.type==="run" && w.intervals && w.intervals.length){
     defaultRest = (w.intervals[0].rest_s || 60);
   }
@@ -505,9 +494,12 @@ function onPos(pos){
   if(speed && speed>0.4){ secPerKm = 1000/speed; }
 
   if(lastFix){
-    const dd = haversine(lastFix.lat, lastFix.lon, fix.lat, fix.lon);
+    const R=6371000, toRad=d=>d*Math.PI/180;
+    const dLat=toRad(latitude-lastFix.lat), dLon=toRad(longitude-lastFix.lon);
+    const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lastFix.lat))*Math.cos(toRad(latitude))*Math.sin(dLon/2)**2;
+    const dd = 2*R*Math.asin(Math.sqrt(a));
     const dt = (ts - lastFix.ts)/1000;
-    if(dd < 30 || (fix.acc < 20 && lastFix.acc < 20)){
+    if(dd < 30 || (accuracy < 20 && lastFix.acc < 20)){
       distSinceLap += dd;
       if(!secPerKm && dt>0 && dd/dt>0.4){ secPerKm = 1000/(dd/dt); }
     }
@@ -518,7 +510,11 @@ function onPos(pos){
         doLap();
       }
       if(startGeo){
-        const d2 = haversine(startGeo.lat, startGeo.lon, fix.lat, fix.lon);
+        const d2 = (function(){
+          const dLat2=toRad(startGeo.lat - latitude), dLon2=toRad(startGeo.lon - longitude);
+          const a2=Math.sin(dLat2/2)**2 + Math.cos(toRad(latitude))*Math.cos(toRad(startGeo.lat))*Math.sin(dLon2/2)**2;
+          return 2*R*Math.asin(Math.sqrt(a2));
+        })();
         if(d2 > (18*1.5)) crossingArmed = true;
         if(crossingArmed && d2 <= 18 && since >= 35){
           doLap();
