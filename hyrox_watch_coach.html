@@ -140,4 +140,17 @@ function requestGPSOnce(){
 function startGPSWatch(){
   if(geoWatchId!=null||!navigator.geolocation)return;
   geoWatchId=navigator.geolocation.watchPosition(
-    pos=>{setGPSStatus
+    pos=>{setGPSStatus(`ok (±${Math.round(pos.coords.accuracy||0)} m)`);},
+    err=>setGPSStatus('watch error'),
+    {enableHighAccuracy:true,maximumAge:500,timeout:10000}
+  );
+  setGPSStatus('watching…');
+}
+if(navigator.permissions&&navigator.permissions.query){
+  navigator.permissions.query({name:'geolocation'}).then(s=>{
+    setGPSStatus(`permission: ${s.state}`);s.onchange=()=>setGPSStatus(`permission: ${s.state}`);});
+}
+btnGPS.addEventListener('click',()=>requestGPSOnce());
+</script>
+</body>
+</html>
