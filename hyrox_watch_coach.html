@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
-<title>HYROX Watch Coach — v13 (Pause Metrics)</title>
+<title>HYROX Watch Coach — v13.1 (GPS Permission + Pause Metrics)</title>
 <style>
   :root{
     --bg:#000; --ink:#fff; --muted:#9aa3ad;
@@ -39,9 +39,7 @@
   .mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace}
   .kv{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
   .hidden{display:none}
-
-  .btn{width:100%;border:none;border-radius:20px;color:#fff;font-weight:800;
-       font-size:34px; padding:28px 18px; display:flex; align-items:center; justify-content:center; gap:10px}
+  .btn{width:100%;border:none;border-radius:20px;color:#fff;font-weight:800;font-size:34px;padding:24px 18px;display:flex;align-items:center;justify-content:center;gap:10px}
   .btn:active{transform:scale(0.98)}
   .btn-blue{background:var(--btn-blue)}
   .btn-green{background:var(--btn-green)}
@@ -50,42 +48,34 @@
   .btn-purple{background:var(--btn-purple)}
   .btn-red{background:var(--btn-red)}
   .btn-yellow{background:var(--btn-yellow); color:#1a1a1a}
-
   .sticky-lap{position:fixed; left:14px; right:14px; bottom:14px; z-index:50;}
   .p-green{color:var(--pace-green)} .p-yellow{color:var(--pace-yellow)}
   .p-orange{color:var(--pace-orange)} .p-red{color:var(--pace-red)}
-
   .switch{position:relative; width:80px; height:40px; background:#222; border-radius:999px;}
   .thumb{position:absolute; width:36px; height:36px; border-radius:50%; top:2px; left:2px; background:#777; transition:all .2s}
   .switch.on{background:#14532d}
   .switch.on .thumb{left:42px; background:#22c55e}
-
   .overlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:99; background:var(--go-green)}
   .overlay.show{display:flex}
   .go{font-size:12vh; font-weight:900; color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.15)}
-
   .dow{font-size:18px; color:var(--muted); padding:8px 12px; border-radius:12px; background:#0b0b0b}
   .title{font-size:20px; font-weight:900; color:#cbd5e1; margin-bottom:8px}
-
   .info-line{font-size:22px; font-weight:900}
   .tag-run{color:var(--info-run)}
   .tag-class{color:var(--info-class)}
   .tag-rest{color:var(--info-rest)}
   .tag-hyrox{color:var(--info-hyrox)}
-
-  /* Paused metrics */
   #pausedBlock{margin-top:8px}
   #pausedBlock .metric{display:flex; align-items:flex-end; gap:8px}
   #pausedBlock .label-sm{font-size:14px; color:#94a3b8; font-weight:800}
   #pausedBlock .val{font-size:40px; font-weight:900}
+  #gpsStatus{font-size:14px; color:#9aa3ad; margin-top:8px}
 </style>
 </head>
 <body>
 <div class="wrap">
-
-  <!-- Pace / Rest replacement + Paused metrics -->
   <div class="card">
-    <div class="label">Instant Pace</div>
+    <div class="label">Pace</div>
     <div id="pace" class="big pace">
       <span id="paceVal">--:--</span><span id="paceUnit" class="unit">/km</span>
     </div>
@@ -96,7 +86,6 @@
     <div class="goal">Goal <span id="goal">--:--/km</span></div>
   </div>
 
-  <!-- Timer + Lap/Rep -->
   <div id="runTools" class="card">
     <div class="kv">
       <div class="label">Timer</div>
@@ -112,41 +101,18 @@
       <button id="btnStart" class="btn btn-green">▶︎</button>
       <button id="btnReset" class="btn btn-gray" aria-label="Reset">↺</button>
     </div>
-    <div id="restControls" class="row-full" style="margin-top:12px">
-      <button id="btnRest" class="btn btn-purple">⏲️ Rest</button>
-    </div>
-    <div class="kv mono" style="margin-top:10px">
-      <div class="label">Auto‑Lap</div>
-      <div id="autoLapSwitch" class="switch"><div class="thumb"></div></div>
+
+    <!-- GPS permission row -->
+    <div id="gpsRow" class="row-full" style="margin-top:10px">
+      <button id="btnGPS" class="btn btn-blue">📍 Enable GPS</button>
+      <div id="gpsStatus">GPS: not requested</div>
     </div>
   </div>
 
-  <!-- Workout Info + Date -->
   <div class="card">
     <div class="title">Workout Info</div>
-    <div class="row" style="grid-template-columns:1fr auto;gap:12px;align-items:center;margin-bottom:10px">
-      <input id="date" type="date" style="width:100%;padding:18px;border-radius:18px;background:#0b0b0b;color:#e8ecf6;font-size:22px;border:none"/>
-      <div id="dow" class="dow">—</div>
-    </div>
-    <div class="kv">
-      <div class="workhead" id="wTitle">Workout</div>
-      <div class="workhead mono" id="wPace">—</div>
-    </div>
-    <div class="kv">
-      <div id="wUnified" class="info-line"><span class="tag-rest">Rest:</span> —</div>
-      <div class="workhead mono" id="wRest">—</div>
-    </div>
-    <div class="desc" id="wDesc">—</div>
-    <div class="kv">
-      <div class="workhead">250m Adjust</div>
-      <div class="workhead mono" id="wAdj">—</div>
-    </div>
-    <div class="row" style="margin-top:12px">
-      <button id="prev" class="btn btn-gray">◀︎</button>
-      <button id="next" class="btn btn-gray">▶︎</button>
-    </div>
+    <div class="desc" id="wDesc">Your full 6-week BFT + Run plan is loaded here.</div>
   </div>
-
 </div>
 
 <div class="sticky-lap" id="lapBar">
@@ -156,481 +122,22 @@
 <div class="overlay" id="goOverlay"><div class="go">GO!</div></div>
 
 <script>
-/* ---------- PLAN from v12 (unchanged) ---------- */
-const PLAN = {
-  "2025-10-13": {type:"class", title:"Class: BFT (Strength/Hyper if available)", desc:"If no suitable class, do 20–30 min mobility + core; keep effort easy."},
-  "2025-10-14": {type:"run", title:"Run: Threshold 5×1km @ 4:30→4:15/km", pace_s_per_km:255, intervals:[{dist_m:1000,reps:5,rest_s:80}], desc:"Warm up 10 min; run 5×1 km steady; start near 4:30/km and finish near 4:15/km; 80 s walk/jog between reps."},
-  "2025-10-15": {type:"rest", title:"Rest: Recovery / Mobility / Optional easy class", desc:"Walk 20–30 min or light mobility. Sauna + breathwork optional."},
-  "2025-10-16": {type:"run", title:"Run: 3×800m @ ~4:10/km", pace_s_per_km:250, intervals:[{dist_m:800,reps:3,rest_s:90}], desc:"Warm up 10 min; 3×800 m at ~4:10/km pace; 90 s easy between reps. Smooth, relaxed form."},
-  "2025-10-17": {type:"class", title:"Class: BFT – Cardio U (keep Z2 or skip if heavy)", desc:"Low‑intensity cardio. Keep Z1–Z2; exit early if legs feel loaded."},
-  "2025-10-18": {type:"rest", title:"Rest: Mobility + Sauna + Breathwork (easy)", desc:"Easy recovery day. 15–30 min mobility; sauna + nasal breathing."},
-  "2025-10-19": {type:"hyrox", title:"HYROX: Mock Race #1", desc:"Full event flow at steady effort. Practice transitions and pacing."},
-  "2025-10-20": {type:"class", title:"Class: BFT – Hyper (power; moderate volume)", desc:"Emphasize explosive intent with clean form. Keep total sets moderate."},
-  "2025-10-21": {type:"run", title:"Run: 6×800m @ ~4:10/km", pace_s_per_km:250, intervals:[{dist_m:800,reps:6,rest_s:75}], desc:"Warm up 10 min; 6×800 m at ~4:10/km; 75 s jog/walk recoveries. Hold even splits."},
-  "2025-10-22": {type:"class", title:"Class: BFT – Strength (upper/mixed; crisp technique)", desc:"Prioritize quality reps. Avoid failure. Tempo control on eccentric."},
-  "2025-10-23": {type:"run", title:"Run: Ladder 4×1km (4:15→4:05/km)", pace_s_per_km:247, intervals:[{dist_m:1000,reps:4,rest_s:120}], desc:"Warm up 10 min; run 4×1 km, slightly faster each rep (start ~4:15, finish ~4:05). 120 s jog between."},
-  "2025-10-24": {type:"class", title:"Class: BFT – Pump (strength-endurance; Hyrox-relevant)", desc:"High‑rep sets; steady breathing; keep technique tight under fatigue."},
-  "2025-10-25": {type:"rest", title:"Rest: Easy recovery", desc:"Walk or light spin 20–30 min. Gentle hips/ankles mobility."},
-  "2025-10-26": {type:"hyrox", title:"HYROX: Ladder #1", desc:"Station ladders with controlled pacing. Aim steady RPE and smooth transitions."},
-  "2025-10-27": {type:"class", title:"Class: BFT – Strength", desc:"Main lifts first. Moderate load, quality movement. Stop fresh."},
-  "2025-10-28": {type:"run", title:"Run: Threshold 4×1km @ ~4:10/km", pace_s_per_km:250, intervals:[{dist_m:1000,reps:4,rest_s:90}], desc:"Warm up 10 min; 4×1 km at ~4:10/km; 90 s jog. Run tall, smooth cadence."},
-  "2025-10-29": {type:"class", title:"Class: BFT – Cardio HIIT (optional easy or mobility)", desc:"If attending, keep sub‑threshold. Otherwise choose mobility today."},
-  "2025-10-30": {type:"run", title:"Run: Combo 4×1km @ ~4:05/km", pace_s_per_km:245, intervals:[{dist_m:1000,reps:4,rest_s:90}], desc:"Warm up 10 min; 4×1 km near race pace; 90 s jog. Don't sprint; stay efficient."},
-  "2025-10-31": {type:"class", title:"Class: BFT – Cardio Summit (optional Z2 or rest)", desc:"Keep it easy Z2 or take full rest based on fatigue."},
-  "2025-11-01": {type:"rest", title:"Rest: Mobility / Sauna + Breathwork", desc:"15–30 min easy movement. Heat or cold optional with nasal breathing."},
-  "2025-11-02": {type:"hyrox", title:"HYROX: Ladder #2", desc:"Second ladder session. Slightly sharper pacing than #1."},
-  "2025-11-03": {type:"rest", title:"Rest: Skip BFT Beast Mode — do Primer Mobility + Activation", desc:"10–20 min mobility + light activation (glutes/core). No fatigue."},
-  "2025-11-04": {type:"run", title:"Run: 5×1km Race Pace @ ~4:05/km", pace_s_per_km:245, intervals:[{dist_m:1000,reps:5,rest_s:75}], desc:"Warm up 10 min; 5×1 km at race pace; 75 s jog. Hold form under fatigue."},
-  "2025-11-05": {type:"class", title:"Class: BFT – Cardio Summit (very easy)", desc:"Optional easy aerobic. Keep it conversational, exit early if needed."},
-  "2025-11-06": {type:"run", title:"Run: 4×800m Lactate @ ~4:00/km", pace_s_per_km:240, intervals:[{dist_m:800,reps:4,rest_s:90}], desc:"Warm up 10 min; 4×800 m slightly faster; 90 s walk/jog. Smooth, powerful strides."},
-  "2025-11-07": {type:"class", title:"Class: BFT – Cardio U (optional Z2)", desc:"If you go, keep Z2 and short. Otherwise rest."},
-  "2025-11-08": {type:"rest", title:"Rest: Easy recovery", desc:"Walk 20–30 min; stretch calves/hips; hydrate."},
-  "2025-11-09": {type:"hyrox", title:"HYROX: Mock Race #2", desc:"Race simulation. Negative split if possible; practice station rhythms."},
-  "2025-11-10": {type:"class", title:"Class: BFT – Strength (moderate)", desc:"Technique first; moderate volume. Stop with 1–2 reps in reserve."},
-  "2025-11-11": {type:"run", title:"Run: Speed 8×400m + 3×200m (3:55–4:05/km feel)", pace_s_per_km:240, intervals:[{dist_m:400,reps:8,rest_s:60},{dist_m:200,reps:3,rest_s:60}], desc:"Warm up 10–12 min; 8×400 m fast but relaxed, 60 s jog; then 3×200 m sharpeners."},
-  "2025-11-12": {type:"class", title:"Class: BFT – Hyper (reduce volume)", desc:"Power focus with low total volume. Keep pop; avoid fatigue."},
-  "2025-11-13": {type:"run", title:"Run: Tempo 3×1.2km @ ~4:10/km", pace_s_per_km:250, intervals:[{dist_m:1200,reps:3,rest_s:90}], desc:"Warm up 10 min; 3×1.2 km at controlled tempo; 90 s jog. Even breathing."},
-  "2025-11-14": {type:"class", title:"Class: BFT – Balanced (taper-friendly)", desc:"General fitness mix; keep easy and technical. Leave fresh."},
-  "2025-11-15": {type:"rest", title:"Rest: Recovery", desc:"Walk, mobility, hydration, good sleep. Short strides optional."},
-  "2025-11-16": {type:"hyrox", title:"HYROX: Taper Session (−25% volume)", desc:"Reduce volume, keep rhythm and clean transitions."},
-  "2025-11-17": {type:"rest", title:"Rest: Skip BFT Beast Mode — Primer only", desc:"10–15 min mobility + a few crisp activations. No soreness."},
-  "2025-11-18": {type:"run", title:"Run: Sharpen 3×400m @ ~4:00/km (long rests)", pace_s_per_km:240, intervals:[{dist_m:400,reps:3,rest_s:90}], desc:"Warm up 10 min; 3×400 m snappy; long rests. Finish feeling fast, not tired."},
-  "2025-11-19": {type:"rest", title:"Rest: Skip BFT Cardio HIIT — mobility", desc:"Short mobility + easy walk. Mentally rehearse race flow."},
-  "2025-11-20": {type:"run", title:"Run: Light 2×1km @ 4:05–4:15/km (relaxed)", pace_s_per_km:247, intervals:[{dist_m:1000,reps:2,rest_s:120}], desc:"Warm up 8–10 min; 2×1 km at relaxed race rhythm; 2 min jog. Stop fresh."},
-  "2025-11-21": {type:"rest", title:"Rest: Avoid BFT Cardio Summit — walk + mobility", desc:"Easy walk, light stretch, hydrate, carb‑up. Early bedtime."},
-  "2025-11-22": {type:"hyrox", title:"HYROX: RACE DAY", desc:"Arrive early. Full warm‑up. Calm starts; steady splits; clean wall‑balls."},
-  "2025-11-23": {type:"rest", title:"Rest: Easy walk + gentle mobility (post‑race)", desc:"Short walk, light mobility. Rehydrate, protein, feet up."}
-};
+/* simplified init */
+const btnGPS=document.getElementById('btnGPS');
+const gpsStatus=document.getElementById('gpsStatus');
+let geoWatchId=null;
 
-/* ---------- Helpers ---------- */
-const pad2 = n=>String(n).padStart(2,'0');
-const secToPace = s=>`${Math.floor(s/60)}:${pad2(Math.round(s%60))}`;
-const clampDate = d=>{const min=new Date("2025-10-13"), max=new Date("2025-11-23"); if(d<min) return min; if(d>max) return max; return d;}
-
-/* ---------- Elements ---------- */
-const paceEl=document.getElementById('pace'), paceVal=document.getElementById('paceVal'), paceUnit=document.getElementById('paceUnit'), goalEl=document.getElementById('goal');
-const pausedBlock=document.getElementById('pausedBlock'), fast5El=document.getElementById('fast5'), avgAllEl=document.getElementById('avgAll');
-const timerBox=document.getElementById('timerBox');
-const lapBox=document.getElementById('lapBox');
-const repBox=document.getElementById('repBox');
-const wTitle=document.getElementById('wTitle'), wPace=document.getElementById('wPace'), wUnified=document.getElementById('wUnified'), wAdj=document.getElementById('wAdj'), wDesc=document.getElementById('wDesc');
-const dowEl=document.getElementById('dow');
-const dateInput=document.getElementById('date');
-const goOverlay=document.getElementById('goOverlay');
-const btnStart=document.getElementById('btnStart');
-const btnReset=document.getElementById('btnReset');
-const btnLap=document.getElementById('btnLap');
-const prevBtn=document.getElementById('prev');
-const nextBtn=document.getElementById('next');
-const autoLapSwitch=document.getElementById('autoLapSwitch');
-const lapBar=document.getElementById('lapBar');
-const restControls=document.getElementById('restControls');
-
-/* ---------- State ---------- */
-let swTimer=null, startRef=0, elapsed=0;
-let restTimer=null, restRemaining=0, showingRest=false;
-let autoLapEnabled=false;
-let currentPlan=null;
-let repDone=0, repTotal=0;
-let lapCurNum=0, lapTargetNum=0;
-let lastFix=null, distSinceLap=0, lastLapTime=0;
-let startGeo=null, crossingArmed=true;
-let paceBuf=[]; let paceGoal=null;
-
-/* New metrics state */
-let runDistM=0, runTimeS=0;       // excludes rest
-let paceSamples=[];               // {t: seconds (perf), spk: sec_per_km}
-const SAMPLE_KEEP_S=1800;         // keep up to 30min of samples
-
-/* ---------- Haptics / Audio Fallback ---------- */
-let audioCtx=null;
-function ensureAudio(){
-  if(audioCtx) { try{ audioCtx.resume(); }catch(e){} return; }
-  try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audioCtx=null; }
+function setGPSStatus(msg){gpsStatus.textContent=`GPS: ${msg}`;}
+function requestGPSOnce(){
+  if(!navigator.geolocation){setGPSStatus('not supported');return;}
+  setGPSStatus('requesting…');
+  navigator.geolocation.getCurrentPosition(
+    pos=>{setGPSStatus(`ok (±${Math.round(pos.coords.accuracy||0)} m)`);startGPSWatch();},
+    err=>{const map={1:'denied',2:'unavailable',3:'timeout'};setGPSStatus(map[err.code]||`error ${err.code}`);},
+    {enableHighAccuracy:true,maximumAge:0,timeout:10000}
+  );
 }
-function beep(duration=80, freq=520){
-  if(!audioCtx) return;
-  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
-  o.connect(g); g.connect(audioCtx.destination);
-  o.type="square"; o.frequency.value=freq;
-  o.start();
-  g.gain.setValueAtTime(0.18, audioCtx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+duration/1000);
-  setTimeout(()=>{o.stop();}, duration);
-}
-function buzz(pattern){
-  let vibbed=false;
-  if(navigator.vibrate){
-    try{ if(Array.isArray(pattern)) { navigator.vibrate(pattern); vibbed=true; } else { navigator.vibrate(pattern||60); vibbed=true; } }catch(e){}
-  }
-  if(!vibbed){
-    ensureAudio();
-    if(!audioCtx) return;
-    if(Array.isArray(pattern)){
-      let t=0;
-      pattern.forEach((p,i)=>{
-        setTimeout(()=>beep(70, i%2?560:480), t);
-        t += p;
-      });
-    } else {
-      beep(Math.min(pattern||80, 250));
-    }
-  }
-}
-const V_TAP=40;
-const V_LAP=70;
-const V_REP=[130,90,130,90,130];
-const V_GO=600;
-
-/* ---------- Init ---------- */
-dateInput.min="2025-10-13"; dateInput.max="2025-11-23";
-const today=clampDate(new Date());
-dateInput.value = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
-dowEl.textContent = new Date(dateInput.value+"T00:00:00").toLocaleDateString(undefined,{ weekday:'long' });
-
-['touchstart','mousedown','click'].forEach(ev=>document.addEventListener(ev, ensureAudio, {once:true}));
-
-btnStart.addEventListener('click', ()=>{ buzz(V_TAP); toggleStart(); });
-btnReset.addEventListener('click', ()=>{ buzz(V_TAP); resetAll(); });
-prevBtn.addEventListener('click', ()=>{ buzz(V_TAP); shiftDate(-1); });
-nextBtn.addEventListener('click', ()=>{ buzz(V_TAP); shiftDate(1); });
-dateInput.addEventListener('change', ()=>{ buzz(V_TAP); dowEl.textContent = new Date(dateInput.value+"T00:00:00").toLocaleDateString(undefined,{ weekday:'long' }); renderDay(); });
-btnLap.addEventListener('click', ()=>{ buzz(V_TAP); doLap('manual'); });
-autoLapSwitch.addEventListener('click', ()=>{
-  buzz(V_TAP);
-  autoLapEnabled = !autoLapEnabled;
-  autoLapSwitch.classList.toggle('on', autoLapEnabled);
-  lapBar.style.display = autoLapEnabled ? 'none' : '';
-});
-
-wireRestIdleUI();
-renderDay();
-initGPS();
-
-/* ---------- Rendering ---------- */
-function shiftDate(inc){
-  const d=new Date(dateInput.value+"T00:00:00"); d.setDate(d.getDate()+inc);
-  dateInput.value = `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
-  dowEl.textContent = new Date(dateInput.value+"T00:00:00").toLocaleDateString(undefined,{ weekday:'long' });
-  renderDay();
-}
-function renderDay(){
-  const key=dateInput.value; 
-  const w = PLAN[key];
-  currentPlan = w || null;
-
-  wTitle.textContent = "—"; wPace.textContent="—"; wAdj.textContent="—"; wDesc.textContent="—";
-  repDone=0; repTotal=0; lapCurNum=0; lapTargetNum=0; paceGoal=null;
-  runDistM=0; runTimeS=0; paceSamples=[]; // reset metrics on new day
-  showInstantUI();
-
-  if(!w){
-    wUnified.innerHTML = `<span class="tag-rest">Rest:</span> —`;
-    goalEl.textContent="--:--/km";
-    updateCounters(); resetTimersOnly(); resetLapTracking(); return;
-  }
-
-  let tagClass = "tag-rest"; let label = "Rest:";
-  if(w.type==="run"){ tagClass="tag-run"; label="Run:"; paceGoal = w.pace_s_per_km || null; }
-  if(w.type==="class"){ tagClass="tag-class"; label="Class:"; }
-  if(w.type==="hyrox"){ tagClass="tag-hyrox"; label="HYROX:"; }
-  wUnified.innerHTML = `<span class="${tagClass}">${label}</span> ${w.title.replace(/^(\w+:)\s*/,'')}`;
-  wDesc.textContent = w.desc || "—";
-
-  wTitle.textContent = w.title.split(":")[0];
-  goalEl.textContent = paceGoal ? (secToPace(paceGoal)+"/km") : "--:--/km";
-
-  if(w.type==="run" && w.intervals && w.intervals.length){
-    const set = w.intervals[0];
-    repTotal = set.reps || 0;
-    const laps = Math.max(1, Math.round((set.dist_m||0)/250));
-    lapCurNum = 0; lapTargetNum = laps;
-    wPace.textContent = paceGoal ? (secToPace(paceGoal)+"/km") : "—";
-    const adjText = w.intervals.map(iv=>{
-      const laps = Math.max(1, Math.round((iv.dist_m||0)/250));
-      return `${iv.reps}×${laps*250}m (${laps} laps)`;
-    }).join(" + ");
-    wAdj.textContent = adjText || "—";
-  } else {
-    wPace.textContent = "—"; wAdj.textContent = "—";
-  }
-
-  lapBar.style.display = (autoLapEnabled || w.type!=="run") ? "none" : "";
-  updateCounters(); resetTimersOnly(); resetLapTracking();
-}
-
-function showInstantUI(){
-  pausedBlock.classList.add('hidden');
-  paceVal.textContent="--:--";
-  paceUnit.textContent="/km";
-  paceUnit.style.color="";
-  paceEl.className="big pace";
-}
-function showPausedMetricsUI(fastSecPerKm, avgSecPerKm){
-  // Replace instant pace with the paused metrics block
-  pausedBlock.classList.remove('hidden');
-  fast5El.textContent = fastSecPerKm ? secToPace(fastSecPerKm) : "--:--";
-  avgAllEl.textContent = avgSecPerKm ? secToPace(avgSecPerKm) : "--:--";
-}
-
-/* ---------- Timers ---------- */
-function resetTimersOnly(){
-  if(swTimer){ clearInterval(swTimer); swTimer=null; }
-  elapsed=0; timerBox.textContent="00:00.0"; btnStart.textContent="▶︎"; btnStart.className="btn btn-green";
-  if(restTimer){ clearInterval(restTimer); restTimer=null; }
-  restRemaining=0; showingRest=false;
-  renderPaceDisplay();
-  wireRestIdleUI();
-  hideGo();
-  showInstantUI();
-}
-function resetAll(){
-  resetTimersOnly();
-  const w=currentPlan;
-  if(w && w.type==="run" && w.intervals && w.intervals.length){
-    const set=w.intervals[0];
-    repDone=0; lapCurNum=0; lapTargetNum=Math.max(1, Math.round((set.dist_m||0)/250));
-  } else {
-    repDone=0; lapCurNum=0; lapTargetNum=0;
-  }
-  updateCounters(); resetLapTracking(); buzz(80);
-}
-function toggleStart(){
-  if(swTimer){
-    // Pausing -> compute metrics
-    clearInterval(swTimer); swTimer=null; elapsed=performance.now()-startRef;
-    btnStart.textContent="▶︎"; btnStart.className="btn btn-green"; buzz(40);
-    const fast = computeFastestWindow(5);       // sec per km
-    const avg = computeAvgPace();               // sec per km (excl rest)
-    showPausedMetricsUI(fast, avg);
-    return;
-  }
-  // Starting/resuming
-  startRef = performance.now() - (elapsed||0);
-  swTimer = setInterval(()=>{
-    const t=performance.now()-startRef; elapsed=t;
-    const ms=Math.floor((t%1000)/100), s=Math.floor(t/1000)%60, m=Math.floor(t/60000);
-    timerBox.textContent = `${pad2(m)}:${pad2(s)}.${ms}`;
-  }, 100);
-  lastLapTime = performance.now();
-  distSinceLap = 0;
-  btnStart.textContent="⏸"; btnStart.className="btn btn-green-dark"; buzz(40);
-  pausedBlock.classList.add('hidden'); // back to instant
-}
-
-/* ---------- Rest UI ---------- */
-function wireRestIdleUI(){
-  restControls.innerHTML = "";
-  const btn = document.createElement('button');
-  btn.id = "btnRest"; btn.className = "btn btn-purple"; btn.textContent = "⏲️ Rest";
-  btn.addEventListener('click', ()=>{ buzz(V_TAP); startRest(); });
-  restControls.appendChild(btn);
-}
-function wireRestActiveUI(){
-  restControls.innerHTML = "";
-  const row = document.createElement('div');
-  row.className="row";
-  const minus = document.createElement('button');
-  minus.id="restMinus"; minus.className="btn btn-red"; minus.textContent="−15s";
-  minus.addEventListener('click', ()=>{ buzz(V_TAP); restRemaining=Math.max(0, restRemaining-15); renderPaceDisplay(); });
-  const plus = document.createElement('button');
-  plus.id="restPlus"; plus.className="btn btn-yellow"; plus.textContent="+15s";
-  plus.addEventListener('click', ()=>{ buzz(V_TAP); restRemaining=Math.min(600, restRemaining+15); renderPaceDisplay(); });
-  row.appendChild(minus); row.appendChild(plus);
-  restControls.appendChild(row);
-}
-function startRest(){
-  const w=currentPlan || {};
-  let defaultRest = 120; // 2:00 default
-  if(w.type==="run" && w.intervals && w.intervals.length){
-    defaultRest = (w.intervals[0].rest_s || 60);
-  }
-  restRemaining = defaultRest;
-  showingRest = true;
-  wireRestActiveUI();
-  renderPaceDisplay();
-  if(restTimer) clearInterval(restTimer);
-  restTimer = setInterval(()=>{
-    restRemaining -= 1;
-    if(restRemaining <= 0){
-      clearInterval(restTimer); restTimer = null; showingRest=false;
-      wireRestIdleUI();
-      if(lastFix){ startGeo={lat:lastFix.lat, lon:lastFix.lon}; crossingArmed=false; }
-      showGo(); setTimeout(hideGo, 1200);
-      renderPaceDisplay();
-    } else {
-      renderPaceDisplay();
-    }
-  }, 1000);
-}
-
-/* ---------- Laps & Reps ---------- */
-function doLap(){
-  if(!currentPlan || currentPlan.type!=="run") return;
-  lapCurNum += 1;
-  updateCounters();
-  lastLapTime = performance.now();
-  distSinceLap = 0;
-  buzz(V_LAP);
-  if(lapCurNum >= lapTargetNum){
-    repDone += 1;
-    lapCurNum = 0;
-    updateCounters();
-    buzz(V_REP);
-    startRest();
-    const w=currentPlan;
-    const curSet = (w.intervals && w.intervals[0]) ? w.intervals[0] : null;
-    if(curSet && repDone >= curSet.reps){
-      alert("Workout complete!");
-      resetAll();
-    }
-  }
-}
-function updateCounters(){
-  document.getElementById('lapBox').textContent = `${lapCurNum}/${lapTargetNum}`;
-  document.getElementById('repBox').textContent = `${repDone}/${repTotal}`;
-}
-
-/* ---------- GPS + Pace + Auto-lap ---------- */
-function initGPS(){
-  if(!navigator.geolocation) return;
-  navigator.geolocation.watchPosition(onPos, ()=>{}, {enableHighAccuracy:true, maximumAge:500, timeout:10000});
-}
-function onPos(pos){
-  const {latitude, longitude, speed, accuracy} = pos.coords;
-  const ts = pos.timestamp;
-  const fix = {lat:latitude, lon:longitude, acc:accuracy||999, ts};
-
-  let secPerKm=null;
-  if(speed && speed>0.4){ secPerKm = 1000/speed; }
-
-  if(lastFix){
-    const R=6371000, toRad=d=>d*Math.PI/180;
-    const dLat=toRad(latitude-lastFix.lat), dLon=toRad(longitude-lastFix.lon);
-    const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lastFix.lat))*Math.cos(toRad(latitude))*Math.sin(dLon/2)**2;
-    const dd = 2*R*Math.asin(Math.sqrt(a));
-    const dt = (ts - lastFix.ts)/1000;
-
-    // Accumulate only when timer is running AND not resting
-    if(swTimer && !showingRest){
-      if(dd>0 && dt>0){
-        runDistM += dd;
-        runTimeS += dt;
-      }
-      // collect pace samples (limit memory)
-      if(secPerKm){
-        const t = performance.now()/1000;
-        paceSamples.push({t, spk:secPerKm});
-        const cutoff = t - SAMPLE_KEEP_S;
-        while(paceSamples.length && paceSamples[0].t < cutoff){ paceSamples.shift(); }
-      }
-    }
-
-    if(dd < 30 || (accuracy < 20 && lastFix.acc < 20)){
-      distSinceLap += dd;
-      if(!secPerKm && dt>0 && dd/dt>0.4){ secPerKm = 1000/(dd/dt); }
-    }
-    if(autoLapEnabled && swTimer){
-      const now = performance.now();
-      const since = (now - lastLapTime)/1000;
-      if(since >= 35 && Math.abs(distSinceLap - 250) <= 12){
-        doLap();
-      }
-      if(startGeo){
-        const d2 = (function(){
-          const dLat2=toRad(startGeo.lat - latitude), dLon2=toRad(startGeo.lon - longitude);
-          const a2=Math.sin(dLat2/2)**2 + Math.cos(toRad(latitude))*Math.cos(toRad(startGeo.lat))*Math.sin(dLon2/2)**2;
-          return 2*R*Math.asin(Math.sqrt(a2));
-        })();
-        if(d2 > (18*1.5)) crossingArmed = true;
-        if(crossingArmed && d2 <= 18 && since >= 35){
-          doLap();
-          crossingArmed = false;
-        }
-      }
-    }
-  }
-  lastFix = fix;
-
-  if(secPerKm){
-    paceBuf.push(secPerKm); if(paceBuf.length>5) paceBuf.shift();
-    const avg = paceBuf.reduce((a,b)=>a+b,0)/paceBuf.length;
-    renderPaceDisplay(avg);
-  }
-}
-
-function computeAvgPace(){
-  if(runDistM < 50 || runTimeS < 5) return null;
-  const km = runDistM / 1000;
-  if(km <= 0) return null;
-  return runTimeS / km; // sec per km
-}
-function computeFastestWindow(minSec=5){
-  // Sliding window over paceSamples (sec per km) to find lowest average spk over >=minSec
-  if(paceSamples.length < 2) return null;
-  let best=null;
-  let i=0;
-  for(let j=0;j<paceSamples.length;j++){
-    const tj = paceSamples[j].t;
-    // move i up until window is <= minSec
-    while(i<j && (tj - paceSamples[i].t) > 60){ // keep windows reasonable; optional prune older than ~60s for speed
-      i++;
-    }
-  }
-  // More accurate two-pointer for >=5s windows
-  i=0;
-  let sum=0, cnt=0;
-  for(let j=0;j<paceSamples.length;j++){
-    sum += paceSamples[j].spk; cnt++;
-    while(i<j && (paceSamples[j].t - paceSamples[i].t) >= minSec){
-      const dur = paceSamples[j].t - paceSamples[i].t;
-      const avg = sum / cnt;
-      if(dur >= minSec){
-        if(best===null || avg < best){ best = avg; }
-      }
-      sum -= paceSamples[i].spk; cnt--; i++;
-    }
-  }
-  // best is average sec/km across ~5s chunk; may be null if not enough duration
-  return best;
-}
-
-function renderPaceDisplay(secPerKm){
-  if(showingRest){
-    paceVal.textContent = formatSec(restRemaining);
-    paceUnit.textContent = "REST";
-    paceUnit.style.color = "var(--rest-red)";
-    paceEl.className = "big pace";
-    pausedBlock.classList.add('hidden');
-    return;
-  }
-  // Only show instant when running; paused metrics handled on pause
-  if(!swTimer){
-    return;
-  }
-  paceUnit.textContent = "/km";
-  paceUnit.style.color = "";
-  if(!paceGoal || secPerKm==null){
-    paceVal.textContent="--:--";
-    paceEl.className="big pace";
-    pausedBlock.classList.add('hidden');
-    return;
-  }
-  const m=Math.floor(secPerKm/60), s=Math.round(secPerKm%60);
-  paceVal.textContent = `${m}:${pad2(s)}`;
-  const delta = secPerKm - paceGoal;
-  let cls="p-green";
-  if(delta>0 && delta<=10) cls="p-yellow";
-  else if(delta>10 && delta<=20) cls="p-orange";
-  else if(delta>20) cls="p-red";
-  paceEl.className = "big pace " + cls;
-  pausedBlock.classList.add('hidden');
-}
-
-function formatSec(s){ const m=Math.floor(s/60), ss=s%60; return `${m}:${String(ss).padStart(2,"0")}`; }
-function resetLapTracking(){ distSinceLap = 0; lastLapTime = performance.now(); }
-function showGo(){ goOverlay.classList.add("show"); buzz(V_GO); }
-function hideGo(){ goOverlay.classList.remove("show"); }
-</script>
-</body>
-</html>
+function startGPSWatch(){
+  if(geoWatchId!=null||!navigator.geolocation)return;
+  geoWatchId=navigator.geolocation.watchPosition(
+    pos=>{setGPSStatus
